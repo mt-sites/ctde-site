@@ -50,6 +50,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
    <div><label>Start date</label><input type="date" id="fStart"></div>
    <div><label>End date</label><input type="date" id="fEnd"></div>
    <div><label>Date requested</label><input type="date" id="fReq"></div>
+   <div><label>Date approved (optional)</label><input type="date" id="fAppr"></div>
   </div>
   <div style="margin-top:10px"><label>Remarks (optional)</label><input id="fRem"></div>
   <p style="margin:12px 0 0"><button class="btn" id="sBtn" onclick="addReq()">Submit request</button> <button class="sm hide" id="cBtn" onclick="cancelEdit()">Cancel edit</button> <span id="msg" class="note"></span></p>
@@ -120,18 +121,18 @@ async function gateGo(){
  catch(e){$("gM").textContent="Wrong password."}}
 function lockAdmin(){pw=null;resetForm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save. Try again."}
-function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit request";$("cBtn").classList.add("hide")}
+function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit request";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
 function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
  $("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
- $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fRem").value=r.rem||"";
+ $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fRem").value=r.rem||"";$("fAppr").value=r.approved||"";
  $("fT").textContent="Edit request";$("sBtn").textContent="Update request";$("cBtn").classList.remove("hide");$("msg").textContent="";
  $("formCard").scrollIntoView({behavior:"smooth"})}
 async function addReq(){
  const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value||s;
  if(!name||!s){$("msg").textContent="Please enter a name and start date.";return}
  if(e<s){$("msg").textContent="End date is before start date.";return}
- const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,rem:$("fRem").value.trim()});
+ const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,approved:$("fAppr").value,rem:$("fRem").value.trim()});
  try{const wasEdit=!!editId;
   reqs=wasEdit?await api("requests/"+editId,{method:"PATCH",body}):await api("requests",{method:"POST",body});
   resetForm();$("msg").textContent=wasEdit?"Request updated.":"Request saved.";render()}catch(x){fail(x)}}
