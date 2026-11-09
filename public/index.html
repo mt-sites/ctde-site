@@ -51,10 +51,10 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
    <div><label>Date requested</label><input type="date" id="fReq"></div>
    <div><label>Date approved (optional)</label><input type="date" id="fAppr"></div>
   </div>
-  <div class="grid2" style="margin-top:10px"><div><label>Venue</label><input id="fVenue" placeholder="Place / venue"></div><div><label>Purpose</label><input id="fPurpose"></div><div><label>Reason (for personal)</label><input id="fReason"></div></div>
+  <div style="margin-top:10px"><label>Remarks (optional)</label><textarea id="fRem" rows="2" maxlength="300" placeholder="Venue, purpose, or reason for personal leave"></textarea></div>
   <p style="margin:12px 0 0"><button class="btn" id="sBtn" onclick="addReq()">Submit</button> <button class="sm hide" id="cBtn" onclick="cancelEdit()">Cancel edit</button> <span id="msg" class="note"></span></p>
  </div>
- <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+ <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
 </section>
@@ -64,7 +64,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
   <div><label>Year</label><input type="number" id="vY" min="2000" max="2100"></div>
   <div><label>Search name or type</label><input id="vS" placeholder="Search…"></div></div></div>
  <div class="card" id="calV"></div>
- <div class="card"><h2 id="vT">Requests this month</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Dates</th><th>Requested</th><th>Approved</th><th>Status</th></tr></thead><tbody id="vRows"></tbody></table></div></div>
+ <div class="card"><h2 id="vT">Requests this month</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Dates</th><th>Requested</th><th>Approved</th><th>Remarks</th></tr></thead><tbody id="vRows"></tbody></table></div></div>
 </section>
 </main>
 <script>
@@ -107,46 +107,47 @@ function render(){
  if(location.hash==="#admin"){
   const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);$("resCard").classList.toggle("hide",!ok);$("prevCard").classList.toggle("hide",!ok);
   const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
-  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="7" class="note">No requests yet.</td></tr>`;
+  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests yet.</td></tr>`;
   cal($("calA"),aY,aM,reqs,true)}
  else{
   const q=$("vS").value.trim().toLowerCase();
   const l=reqs.filter(r=>inMonth(r,vy,vm)&&(!q||(r.name+" "+lbl(r)).toLowerCase().includes(q))).sort((a,b)=>a.start.localeCompare(b.start));
   cal($("calV"),vy,vm,l,false);$("vT").textContent="Requests in "+MN[vm]+" "+vy+" ("+l.length+")";
-  $("vRows").innerHTML=l.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests found for this month.</td></tr>`}}
+  $("vRows").innerHTML=l.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${esc(allRem(r))}</td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests found for this month.</td></tr>`}}
 async function gateGo(){
  const p=$("gP").value;if(!p)return;
  try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
  catch(e){$("gM").textContent="Wrong password."}}
 function lockAdmin(){pw=null;resetForm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save. Try again."}
-function resetForm(){editId=null;["fName","fOther","fVenue","fPurpose","fReason","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
+function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
 function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
  $("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
- $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fVenue").value=r.venue||"";$("fPurpose").value=r.purpose||"";$("fReason").value=r.reason||"";$("fAppr").value=r.approved||"";
+ $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fRem").value=allRem(r);$("fAppr").value=r.approved||"";
  $("fT").textContent="Edit request";$("sBtn").textContent="Update request";$("cBtn").classList.remove("hide");$("msg").textContent="";
  $("formCard").scrollIntoView({behavior:"smooth"})}
 async function addReq(){
  const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value||s;
  if(!name||!s){$("msg").textContent="Please enter a name and start date.";return}
  if(e<s){$("msg").textContent="End date is before start date.";return}
- const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,approved:$("fAppr").value,venue:$("fVenue").value.trim(),purpose:$("fPurpose").value.trim(),reason:$("fReason").value.trim()});
+ const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,approved:$("fAppr").value,rem:$("fRem").value.trim()});
  try{const wasEdit=!!editId;
   reqs=wasEdit?await api("requests/"+editId,{method:"PATCH",body}):await api("requests",{method:"POST",body});
   resetForm();$("msg").textContent=wasEdit?"Request updated.":"Request saved.";render()}catch(x){fail(x)}}
 async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});if(editId===id)resetForm();render()}catch(x){fail(x)}}
-function details(r){return [["Venue",r.venue],["Purpose",r.purpose],["Reason",r.reason],["Remarks",r.rem]].filter(x=>x[1]).map(x=>`<div class="note">${x[0]}: ${esc(x[1])}</div>`).join("")}
+function allRem(r){return [r.rem,r.venue&&"Venue: "+r.venue,r.purpose&&"Purpose: "+r.purpose,r.reason&&"Reason: "+r.reason].filter(Boolean).join(" · ")}
+function details(r){const t=allRem(r);return t?`<div class="note">${esc(t)}</div>`:""}
 function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
 async function xl(){
  if(!reqs.length){alert("No requests to export yet.");return}
  try{await loadXLSX()}catch(e){alert("Could not load the Excel library. Check your internet connection and try again.");return}
- const rows=[...reqs].sort((a,b)=>a.start.localeCompare(b.start)).map(r=>({"Name":r.name,"Type of request":lbl(r),"Start date":r.start,"End date":r.end,"Venue":r.venue||"","Purpose":r.purpose||"","Reason (personal)":r.reason||"","Remarks":r.rem||"","Date requested":r.requested||"","Date approved":r.approved||"","Status":r.status}));
- const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[26,26,12,12,24,28,28,20,14,14,13].map(w=>({wch:w}));
+ const rows=[...reqs].sort((a,b)=>a.start.localeCompare(b.start)).map(r=>({"Name":r.name,"Type of request":lbl(r),"Start date":r.start,"End date":r.end,"Remarks":allRem(r),"Date requested":r.requested||"","Date approved":r.approved||""}));
+ const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[26,26,12,12,40,14,14].map(w=>({wch:w}));
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Requests");
  XLSX.writeFile(wb,"faculty-requests-"+iso(new Date())+".xlsx")}
 function nextDay(s){const[y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d+1)).replace(/-/g,"")}
-function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+(r.venue?"&location="+encodeURIComponent(r.venue):"")+"&details="+encodeURIComponent("Status: "+r.status+(r.purpose?"\nPurpose: "+r.purpose:"")+(r.reason?"\nReason: "+r.reason:"")+(r.rem?"\n"+r.rem:""))}
+function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+"&details="+encodeURIComponent("Status: "+r.status+(allRem(r)?"\n"+allRem(r):""))}
 function dl(){
  const a=reqs.filter(r=>r.status==="Approved");if(!a.length){alert("No approved requests yet.");return}
  const ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Faculty Calendar//EN\r\n"+a.map(r=>"BEGIN:VEVENT\r\nUID:"+r.id+"@faculty-calendar\r\nDTSTAMP:"+iso(new Date()).replace(/-/g,"")+"T000000Z\r\nDTSTART;VALUE=DATE:"+r.start.replace(/-/g,"")+"\r\nDTEND;VALUE=DATE:"+nextDay(r.end)+"\r\nSUMMARY:"+(r.name+" – "+lbl(r)).replace(/[,;]/g," ")+"\r\nEND:VEVENT\r\n").join("")+"END:VCALENDAR";
