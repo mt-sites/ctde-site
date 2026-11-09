@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Faculty Leave &amp; Travel Calendar</title>
 <style>
@@ -9,7 +10,7 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151d;--card:#1b2030;--ink:#e8ebf5;--mut:#9aa3b8;--line:#2d3448;--acc:#6aa2ff;color-scheme:dark}}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{background:var(--acc);color:#fff;padding:14px 16px}header h1{margin:0;font-size:18px}header p{margin:2px 0 0;font-size:12px;opacity:.85}
+header{background:var(--acc);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}.hbtn{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.55);border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer;white-space:nowrap}header h1{margin:0;font-size:18px}header p{margin:2px 0 0;font-size:12px;opacity:.85}
 nav{display:flex;gap:6px;padding:10px 16px 0;max-width:1100px;margin:auto}
 nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
 nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -37,8 +38,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 @media(max-width:600px){.day{min-height:60px}.chip{font-size:9px}}
 .hide{display:none}
 </style></head><body>
-<header><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>Requests, approvals and schedule preview</p></header>
-<nav><button id="tA" onclick="go('admin')">Admin / Encoder</button><button id="tV" onclick="go('viewer')">Faculty Viewer</button></nav>
+<header><div><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>Requests, approvals and schedule preview</p></div><button id="hb" class="hbtn" onclick="go(location.hash==='#admin'?'viewer':'admin')">Admin</button></header>
 <main>
 <section id="admin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
@@ -54,9 +54,9 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
   <div style="margin-top:10px"><label>Remarks (optional)</label><input id="fRem"></div>
   <p style="margin:12px 0 0"><button class="btn" onclick="addReq()">Submit request</button> <span id="msg" class="note"></span></p>
  </div>
- <div class="card"><h2>Results</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+ <div class="card" id="resCard"><h2>Results</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
- <div class="card"><h2>Calendar preview</h2><div id="calA"></div></div>
+ <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
 </section>
 <section id="viewer" class="hide">
  <div class="card"><div class="grid2">
@@ -86,7 +86,7 @@ $("vM").value=vm;$("vY").value=vy;$("fReq").value=iso(now);
 $("fType").onchange=()=>$("otherWrap").classList.toggle("hide",$("fType").value!=="Others");
 $("vM").onchange=()=>{vm=+$("vM").value;render()};$("vY").oninput=()=>{const y=+$("vY").value;if(y>1999&&y<2101){vy=y;render()}};$("vS").oninput=render;
 function go(v){location.hash=v}
-function route(){const v=location.hash==="#admin"?"admin":"viewer";$("admin").classList.toggle("hide",v!=="admin");$("viewer").classList.toggle("hide",v!=="viewer");$("tA").classList.toggle("on",v==="admin");$("tV").classList.toggle("on",v==="viewer");render()}
+function route(){const v=location.hash==="#admin"?"admin":"viewer";$("admin").classList.toggle("hide",v!=="admin");$("viewer").classList.toggle("hide",v!=="viewer");$("hb").textContent=v==="admin"?"← Faculty View":"Admin";render()}
 addEventListener("hashchange",route);
 async function api(path,opt={}){
  const r=await fetch("/api/"+path,{...opt,headers:{"Content-Type":"application/json",...(pw?{"X-Admin-Password":pw}:{})}});
@@ -105,7 +105,7 @@ function shift(n){aM+=n;if(aM<0){aM=11;aY--}if(aM>11){aM=0;aY++}render()}
 function inMonth(r,y,m){const a=y+"-"+String(m+1).padStart(2,"0");return r.start.slice(0,7)<=a&&a<=r.end.slice(0,7)}
 function render(){
  if(location.hash==="#admin"){
-  const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);
+  const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);$("resCard").classList.toggle("hide",!ok);$("prevCard").classList.toggle("hide",!ok);
   const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
   $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${r.rem?`<div class="note">${esc(r.rem)}</div>`:""}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td><td>${ok?`<button class="sm" onclick="setSt('${r.id}','Approved')">Approve</button><button class="sm" onclick="setSt('${r.id}','Disapproved')">Disapprove</button><button class="sm" onclick="setSt('${r.id}','Pending')">Reset</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="7" class="note">No requests yet.</td></tr>`;
   cal($("calA"),aY,aM,reqs,true)}
