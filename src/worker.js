@@ -35,7 +35,8 @@ export default {
       const r = {
         id: crypto.randomUUID(), name: clip(b.name, 100), type: TYPES.includes(b.type) ? b.type : "Others",
         other: clip(b.other, 100), start: b.start, end: b.end || b.start,
-        requested: DATE.test(b.requested) ? b.requested : today(), approved: "", status: "Pending", rem: clip(b.rem, 200),
+        requested: DATE.test(b.requested) ? b.requested : today(), approved: DATE.test(b.approved) ? b.approved : "", status: DATE.test(b.approved) ? "Approved" : "Pending", rem: clip(b.rem, 300),
+        venue: clip(b.venue, 150), purpose: clip(b.purpose, 200), reason: clip(b.reason, 200),
       };
       if (!r.name || !DATE.test(r.start) || !DATE.test(r.end) || r.end < r.start) return json({ error: "invalid input" }, 400);
       const l = await list(); l.push(r); await save(l); return json(l);
@@ -48,8 +49,20 @@ export default {
       if (m === "DELETE") l.splice(i, 1);
       else if (m === "PATCH") {
         let b; try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
-        if (!STATUS.includes(b.status)) return json({ error: "invalid status" }, 400);
-        l[i].status = b.status; l[i].approved = b.status === "Approved" ? today() : "";
+        const r = l[i];
+        if ("status" in b) {
+          if (!STATUS.includes(b.status)) return json({ error: "invalid status" }, 400);
+          if (b.status !== r.status) { r.status = b.status; r.approved = b.status === "Approved" ? today() : ""; }
+        }
+        if ("name" in b) {
+          const e = { name: clip(b.name, 100), type: TYPES.includes(b.type) ? b.type : "Others", other: clip(b.other, 100),
+            start: b.start, end: b.end || b.start, requested: DATE.test(b.requested) ? b.requested : r.requested, rem: "rem" in b ? clip(b.rem, 300) : r.rem,
+            venue: clip(b.venue, 150), purpose: clip(b.purpose, 200), reason: clip(b.reason, 200) };
+          if (!e.name || !DATE.test(e.start) || !DATE.test(e.end) || e.end < e.start) return json({ error: "invalid input" }, 400);
+          Object.assign(r, e);
+          if (DATE.test(b.approved)) { r.approved = b.approved; r.status = "Approved"; }
+          else if (r.status === "Approved") { r.status = "Pending"; r.approved = ""; }
+        }
       } else return json({ error: "method not allowed" }, 405);
       await save(l); return json(l);
     }
