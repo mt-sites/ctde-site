@@ -7,7 +7,6 @@
 :root{--bg:#f6f7fb;--card:#fff;--ink:#1c2233;--mut:#667;--line:#dde1ec;--acc:#1f5fbf;
 --c1:#d64545;--c2:#2e9e6b;--c3:#1f5fbf;--c4:#8a52c9;--c5:#d98a1c;--c6:#0e9aa7;--c7:#777;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151d;--card:#1b2030;--ink:#e8ebf5;--mut:#9aa3b8;--line:#2d3448;--acc:#6aa2ff;color-scheme:dark}}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 header{background:var(--acc);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}.hbtn{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.55);border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer;white-space:nowrap}header h1{margin:0;font-size:18px}header p{margin:2px 0 0;font-size:12px;opacity:.85}
@@ -52,8 +51,8 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
    <div><label>Date requested</label><input type="date" id="fReq"></div>
    <div><label>Date approved (optional)</label><input type="date" id="fAppr"></div>
   </div>
-  <div style="margin-top:10px"><label>Remarks (optional)</label><input id="fRem"></div>
-  <p style="margin:12px 0 0"><button class="btn" id="sBtn" onclick="addReq()">Submit request</button> <button class="sm hide" id="cBtn" onclick="cancelEdit()">Cancel edit</button> <span id="msg" class="note"></span></p>
+  <div class="grid2" style="margin-top:10px"><div><label>Venue</label><input id="fVenue" placeholder="Place / venue"></div><div><label>Purpose</label><input id="fPurpose"></div><div><label>Reason (for personal)</label><input id="fReason"></div></div>
+  <p style="margin:12px 0 0"><button class="btn" id="sBtn" onclick="addReq()">Submit</button> <button class="sm hide" id="cBtn" onclick="cancelEdit()">Cancel edit</button> <span id="msg" class="note"></span></p>
  </div>
  <div class="card" id="resCard"><h2>Results</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
@@ -108,7 +107,7 @@ function render(){
  if(location.hash==="#admin"){
   const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);$("resCard").classList.toggle("hide",!ok);$("prevCard").classList.toggle("hide",!ok);
   const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
-  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${r.rem?`<div class="note">${esc(r.rem)}</div>`:""}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td><td>${ok?`<button class="sm" onclick="setSt('${r.id}','Approved')">Approve</button><button class="sm" onclick="setSt('${r.id}','Disapproved')">Disapprove</button><button class="sm" onclick="setSt('${r.id}','Pending')">Reset</button><button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="7" class="note">No requests yet.</td></tr>`;
+  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="7" class="note">No requests yet.</td></tr>`;
   cal($("calA"),aY,aM,reqs,true)}
  else{
   const q=$("vS").value.trim().toLowerCase();
@@ -121,25 +120,25 @@ async function gateGo(){
  catch(e){$("gM").textContent="Wrong password."}}
 function lockAdmin(){pw=null;resetForm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save. Try again."}
-function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit request";$("cBtn").classList.add("hide")}
+function resetForm(){editId=null;["fName","fOther","fVenue","fPurpose","fReason","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
 function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
  $("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
- $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fRem").value=r.rem||"";$("fAppr").value=r.approved||"";
+ $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fVenue").value=r.venue||"";$("fPurpose").value=r.purpose||"";$("fReason").value=r.reason||"";$("fAppr").value=r.approved||"";
  $("fT").textContent="Edit request";$("sBtn").textContent="Update request";$("cBtn").classList.remove("hide");$("msg").textContent="";
  $("formCard").scrollIntoView({behavior:"smooth"})}
 async function addReq(){
  const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value||s;
  if(!name||!s){$("msg").textContent="Please enter a name and start date.";return}
  if(e<s){$("msg").textContent="End date is before start date.";return}
- const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,approved:$("fAppr").value,rem:$("fRem").value.trim()});
+ const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,approved:$("fAppr").value,venue:$("fVenue").value.trim(),purpose:$("fPurpose").value.trim(),reason:$("fReason").value.trim()});
  try{const wasEdit=!!editId;
   reqs=wasEdit?await api("requests/"+editId,{method:"PATCH",body}):await api("requests",{method:"POST",body});
   resetForm();$("msg").textContent=wasEdit?"Request updated.":"Request saved.";render()}catch(x){fail(x)}}
-async function setSt(id,st){try{reqs=await api("requests/"+id,{method:"PATCH",body:JSON.stringify({status:st})});render()}catch(x){fail(x)}}
 async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});if(editId===id)resetForm();render()}catch(x){fail(x)}}
+function details(r){return [["Venue",r.venue],["Purpose",r.purpose],["Reason",r.reason],["Remarks",r.rem]].filter(x=>x[1]).map(x=>`<div class="note">${x[0]}: ${esc(x[1])}</div>`).join("")}
 function nextDay(s){const[y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d+1)).replace(/-/g,"")}
-function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+"&details="+encodeURIComponent("Status: "+r.status+(r.rem?"\n"+r.rem:""))}
+function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+(r.venue?"&location="+encodeURIComponent(r.venue):"")+"&details="+encodeURIComponent("Status: "+r.status+(r.purpose?"\nPurpose: "+r.purpose:"")+(r.reason?"\nReason: "+r.reason:"")+(r.rem?"\n"+r.rem:""))}
 function dl(){
  const a=reqs.filter(r=>r.status==="Approved");if(!a.length){alert("No approved requests yet.");return}
  const ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Faculty Calendar//EN\r\n"+a.map(r=>"BEGIN:VEVENT\r\nUID:"+r.id+"@faculty-calendar\r\nDTSTAMP:"+iso(new Date()).replace(/-/g,"")+"T000000Z\r\nDTSTART;VALUE=DATE:"+r.start.replace(/-/g,"")+"\r\nDTEND;VALUE=DATE:"+nextDay(r.end)+"\r\nSUMMARY:"+(r.name+" – "+lbl(r)).replace(/[,;]/g," ")+"\r\nEND:VEVENT\r\n").join("")+"END:VCALENDAR";
