@@ -35,7 +35,7 @@ export default {
       const r = {
         id: crypto.randomUUID(), name: clip(b.name, 100), type: TYPES.includes(b.type) ? b.type : "Others",
         other: clip(b.other, 100), start: b.start, end: b.end || b.start,
-        requested: DATE.test(b.requested) ? b.requested : today(), approved: DATE.test(b.approved) ? b.approved : "", status: DATE.test(b.approved) ? "Approved" : "Pending", rem: clip(b.rem, 200),
+        requested: DATE.test(b.requested) ? b.requested : today(), approved: DATE.test(b.approved) ? b.approved : "", status: DATE.test(b.approved) ? "Approved" : "Pending", rem: clip(b.rem, 300),
         venue: clip(b.venue, 150), purpose: clip(b.purpose, 200), reason: clip(b.reason, 200),
       };
       if (!r.name || !DATE.test(r.start) || !DATE.test(r.end) || r.end < r.start) return json({ error: "invalid input" }, 400);
@@ -56,7 +56,7 @@ export default {
         }
         if ("name" in b) {
           const e = { name: clip(b.name, 100), type: TYPES.includes(b.type) ? b.type : "Others", other: clip(b.other, 100),
-            start: b.start, end: b.end || b.start, requested: DATE.test(b.requested) ? b.requested : r.requested, rem: "rem" in b ? clip(b.rem, 200) : r.rem,
+            start: b.start, end: b.end || b.start, requested: DATE.test(b.requested) ? b.requested : r.requested, rem: "rem" in b ? clip(b.rem, 300) : r.rem,
             venue: clip(b.venue, 150), purpose: clip(b.purpose, 200), reason: clip(b.reason, 200) };
           if (!e.name || !DATE.test(e.start) || !DATE.test(e.end) || e.end < e.start) return json({ error: "invalid input" }, 400);
           Object.assign(r, e);
