@@ -54,7 +54,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
   <div class="grid2" style="margin-top:10px"><div><label>Venue</label><input id="fVenue" placeholder="Place / venue"></div><div><label>Purpose</label><input id="fPurpose"></div><div><label>Reason (for personal)</label><input id="fReason"></div></div>
   <p style="margin:12px 0 0"><button class="btn" id="sBtn" onclick="addReq()">Submit</button> <button class="sm hide" id="cBtn" onclick="cancelEdit()">Cancel edit</button> <span id="msg" class="note"></span></p>
  </div>
- <div class="card" id="resCard"><h2>Results</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+ <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
 </section>
@@ -137,6 +137,14 @@ async function addReq(){
   resetForm();$("msg").textContent=wasEdit?"Request updated.":"Request saved.";render()}catch(x){fail(x)}}
 async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});if(editId===id)resetForm();render()}catch(x){fail(x)}}
 function details(r){return [["Venue",r.venue],["Purpose",r.purpose],["Reason",r.reason],["Remarks",r.rem]].filter(x=>x[1]).map(x=>`<div class="note">${x[0]}: ${esc(x[1])}</div>`).join("")}
+function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
+async function xl(){
+ if(!reqs.length){alert("No requests to export yet.");return}
+ try{await loadXLSX()}catch(e){alert("Could not load the Excel library. Check your internet connection and try again.");return}
+ const rows=[...reqs].sort((a,b)=>a.start.localeCompare(b.start)).map(r=>({"Name":r.name,"Type of request":lbl(r),"Start date":r.start,"End date":r.end,"Venue":r.venue||"","Purpose":r.purpose||"","Reason (personal)":r.reason||"","Remarks":r.rem||"","Date requested":r.requested||"","Date approved":r.approved||"","Status":r.status}));
+ const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[26,26,12,12,24,28,28,20,14,14,13].map(w=>({wch:w}));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Requests");
+ XLSX.writeFile(wb,"faculty-requests-"+iso(new Date())+".xlsx")}
 function nextDay(s){const[y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d+1)).replace(/-/g,"")}
 function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+(r.venue?"&location="+encodeURIComponent(r.venue):"")+"&details="+encodeURIComponent("Status: "+r.status+(r.purpose?"\nPurpose: "+r.purpose:"")+(r.reason?"\nReason: "+r.reason:"")+(r.rem?"\n"+r.rem:""))}
 function dl(){
