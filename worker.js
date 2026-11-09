@@ -35,7 +35,7 @@ export default {
       const r = {
         id: crypto.randomUUID(), name: clip(b.name, 100), type: TYPES.includes(b.type) ? b.type : "Others",
         other: clip(b.other, 100), start: b.start, end: b.end || b.start,
-        requested: DATE.test(b.requested) ? b.requested : today(), approved: "", status: "Pending", rem: clip(b.rem, 200),
+        requested: DATE.test(b.requested) ? b.requested : today(), approved: DATE.test(b.approved) ? b.approved : "", status: DATE.test(b.approved) ? "Approved" : "Pending", rem: clip(b.rem, 200),
       };
       if (!r.name || !DATE.test(r.start) || !DATE.test(r.end) || r.end < r.start) return json({ error: "invalid input" }, 400);
       const l = await list(); l.push(r); await save(l); return json(l);
@@ -58,6 +58,8 @@ export default {
             start: b.start, end: b.end || b.start, requested: DATE.test(b.requested) ? b.requested : r.requested, rem: clip(b.rem, 200) };
           if (!e.name || !DATE.test(e.start) || !DATE.test(e.end) || e.end < e.start) return json({ error: "invalid input" }, 400);
           Object.assign(r, e);
+          if (DATE.test(b.approved)) { r.approved = b.approved; r.status = "Approved"; }
+          else if (r.status === "Approved") { r.status = "Pending"; r.approved = ""; }
         }
       } else return json({ error: "method not allowed" }, 405);
       await save(l); return json(l);
