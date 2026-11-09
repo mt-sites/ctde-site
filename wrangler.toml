@@ -1,0 +1,11 @@
+name = "faculty-calendar"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./public"
+run_worker_first = ["/api/*"]
+
+[[kv_namespaces]]
+binding = "REQUESTS"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"

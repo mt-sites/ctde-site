@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Faculty Leave &amp; Travel Calendar</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#1c2233;--mut:#667;--line:#dde1ec;--acc:#1f5fbf;
+--c1:#d64545;--c2:#2e9e6b;--c3:#1f5fbf;--c4:#8a52c9;--c5:#d98a1c;--c6:#0e9aa7;--c7:#777;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151d;--card:#1b2030;--ink:#e8ebf5;--mut:#9aa3b8;--line:#2d3448;--acc:#6aa2ff;color-scheme:dark}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--acc);color:#fff;padding:14px 16px}header h1{margin:0;font-size:18px}header p{margin:2px 0 0;font-size:12px;opacity:.85}
+nav{display:flex;gap:6px;padding:10px 16px 0;max-width:1100px;margin:auto}
+nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+main{max-width:1100px;margin:auto;padding:12px 16px 40px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h2{margin:0 0 10px;font-size:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+button.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer}
+button.sm{padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;margin:2px 2px 0 0}
+.note{font-size:12px;color:var(--mut);margin-top:8px}.warn{background:#fff3cd;color:#664d03;padding:8px 12px;border-radius:8px;font-size:13px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:720px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}th{color:var(--mut);font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;color:#fff}
+.st-Pending{background:#d98a1c}.st-Approved{background:#2e9e6b}.st-Disapproved{background:#d64545}
+.calhead{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}.calhead h3{margin:0;flex:1;font-size:16px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--line);border-top:1px solid var(--line)}
+.dow{background:var(--bg);font-size:11px;font-weight:700;text-align:center;padding:4px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--mut)}
+.day{min-height:84px;padding:3px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+.day.out{background:var(--bg);opacity:.45}.day b{font-size:12px;color:var(--mut)}.day.today b{background:var(--acc);color:#fff;border-radius:99px;padding:1px 6px}
+.chip{display:block;font-size:10.5px;line-height:1.25;color:#fff;border-radius:4px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.Pending{opacity:.65;outline:1px dashed #fff;outline-offset:-2px}.chip.Disapproved{text-decoration:line-through;opacity:.4}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:11px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+@media(max-width:600px){.day{min-height:60px}.chip{font-size:9px}}
+.hide{display:none}
+</style></head><body>
+<header><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>Requests, approvals and schedule preview</p></header>
+<nav><button id="tA" onclick="go('admin')">Admin / Encoder</button><button id="tV" onclick="go('viewer')">Faculty Viewer</button></nav>
+<main>
+<section id="admin" class="hide">
+ <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
+ <div class="card" id="formCard"><h2>New request <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
+  <div class="grid2">
+   <div><label>Faculty / employee name</label><input id="fName" placeholder="e.g. Juan Dela Cruz"></div>
+   <div><label>Type of request</label><select id="fType"></select></div>
+   <div id="otherWrap" class="hide"><label>Specify (others)</label><input id="fOther"></div>
+   <div><label>Start date</label><input type="date" id="fStart"></div>
+   <div><label>End date</label><input type="date" id="fEnd"></div>
+   <div><label>Date requested</label><input type="date" id="fReq"></div>
+  </div>
+  <div style="margin-top:10px"><label>Remarks (optional)</label><input id="fRem"></div>
+  <p style="margin:12px 0 0"><button class="btn" onclick="addReq()">Submit request</button> <span id="msg" class="note"></span></p>
+ </div>
+ <div class="card"><h2>Results</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
+ <div class="card"><h2>Calendar preview</h2><div id="calA"></div></div>
+</section>
+<section id="viewer" class="hide">
+ <div class="card"><div class="grid2">
+  <div><label>Month</label><select id="vM"></select></div>
+  <div><label>Year</label><input type="number" id="vY" min="2000" max="2100"></div>
+  <div><label>Search name or type</label><input id="vS" placeholder="Search…"></div></div></div>
+ <div class="card" id="calV"></div>
+ <div class="card"><h2 id="vT">Requests this month</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Dates</th><th>Requested</th><th>Approved</th><th>Status</th></tr></thead><tbody id="vRows"></tbody></table></div></div>
+</section>
+</main>
+<script>
+const TYPES=["Sick Leave","Wellness Leave","Travel Order","L&D (Learning & Development)","Vacation Leave","Official Business","Others"];
+const COL=["--c1","--c2","--c3","--c4","--c5","--c6","--c7"];
+const MN=["January","February","March","April","May","June","July","August","September","October","November","December"];
+let reqs=[],pw=null,aY,aM,vm,vy;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const fmt=s=>{if(!s)return "—";const[y,m,d]=s.split("-");return MN[m-1].slice(0,3)+" "+(+d)+", "+y};
+const range=r=>r.start===r.end?fmt(r.start):fmt(r.start)+" – "+fmt(r.end);
+const lbl=r=>r.type==="Others"&&r.other?r.other:r.type;
+const col=r=>"var("+COL[Math.max(0,TYPES.indexOf(r.type))]+")";
+const now=new Date();aY=vy=now.getFullYear();aM=vm=now.getMonth();
+$("fType").innerHTML=TYPES.map(t=>`<option>${esc(t)}</option>`).join("");
+$("vM").innerHTML=MN.map((m,i)=>`<option value="${i}">${m}</option>`).join("");
+$("vM").value=vm;$("vY").value=vy;$("fReq").value=iso(now);
+$("fType").onchange=()=>$("otherWrap").classList.toggle("hide",$("fType").value!=="Others");
+$("vM").onchange=()=>{vm=+$("vM").value;render()};$("vY").oninput=()=>{const y=+$("vY").value;if(y>1999&&y<2101){vy=y;render()}};$("vS").oninput=render;
+function go(v){location.hash=v}
+function route(){const v=location.hash==="#admin"?"admin":"viewer";$("admin").classList.toggle("hide",v!=="admin");$("viewer").classList.toggle("hide",v!=="viewer");$("tA").classList.toggle("on",v==="admin");$("tV").classList.toggle("on",v==="viewer");render()}
+addEventListener("hashchange",route);
+async function api(path,opt={}){
+ const r=await fetch("/api/"+path,{...opt,headers:{"Content-Type":"application/json",...(pw?{"X-Admin-Password":pw}:{})}});
+ if(!r.ok){const e=new Error(r.status);e.status=r.status;throw e}return r.json()}
+async function load(){try{reqs=await api("requests")}catch(e){}render()}
+function cal(el,y,m,list,nav){
+ const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay()),today=iso(new Date());
+ let h=`<div class="calhead">${nav?`<button class="sm" onclick="shift(-1)">◀</button>`:""}<h3>${MN[m]} ${y}</h3>${nav?`<button class="sm" onclick="shift(1)">Next ▶</button>`:""}</div><div class="cal">`;
+ h+=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>`<div class="dow">${d}</div>`).join("");
+ for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);if(i>=35&&d.getMonth()!==m)break;const k=iso(d);
+  const ch=list.filter(r=>r.start<=k&&k<=r.end).map(r=>`<span class="chip ${r.status}" style="background:${col(r)}" title="${esc(r.name+" – "+lbl(r)+" ("+r.status+")")}">${esc(r.name)} · ${esc(lbl(r))}</span>`).join("");
+  h+=`<div class="day${d.getMonth()!==m?" out":""}${k===today?" today":""}"><b>${d.getDate()}</b>${ch}</div>`}
+ h+=`</div><div class="legend">${TYPES.map((t,i)=>`<span><i style="background:var(${COL[i]})"></i>${esc(t)}</span>`).join("")}<span>Faded/dashed = pending · struck = disapproved</span></div>`;
+ el.innerHTML=h}
+function shift(n){aM+=n;if(aM<0){aM=11;aY--}if(aM>11){aM=0;aY++}render()}
+function inMonth(r,y,m){const a=y+"-"+String(m+1).padStart(2,"0");return r.start.slice(0,7)<=a&&a<=r.end.slice(0,7)}
+function render(){
+ if(location.hash==="#admin"){
+  const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);
+  const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
+  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${r.rem?`<div class="note">${esc(r.rem)}</div>`:""}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td><td>${ok?`<button class="sm" onclick="setSt('${r.id}','Approved')">Approve</button><button class="sm" onclick="setSt('${r.id}','Disapproved')">Disapprove</button><button class="sm" onclick="setSt('${r.id}','Pending')">Reset</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="7" class="note">No requests yet.</td></tr>`;
+  cal($("calA"),aY,aM,reqs,true)}
+ else{
+  const q=$("vS").value.trim().toLowerCase();
+  const l=reqs.filter(r=>inMonth(r,vy,vm)&&(!q||(r.name+" "+lbl(r)).toLowerCase().includes(q))).sort((a,b)=>a.start.localeCompare(b.start));
+  cal($("calV"),vy,vm,l,false);$("vT").textContent="Requests in "+MN[vm]+" "+vy+" ("+l.length+")";
+  $("vRows").innerHTML=l.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests found for this month.</td></tr>`}}
+async function gateGo(){
+ const p=$("gP").value;if(!p)return;
+ try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
+ catch(e){$("gM").textContent="Wrong password."}}
+function lockAdmin(){pw=null;render()}
+function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save. Try again."}
+async function addReq(){
+ const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value||s;
+ if(!name||!s){$("msg").textContent="Please enter a name and start date.";return}
+ if(e<s){$("msg").textContent="End date is before start date.";return}
+ try{reqs=await api("requests",{method:"POST",body:JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,rem:$("fRem").value.trim()})});
+  $("msg").textContent="Request saved.";["fName","fOther","fRem","fStart","fEnd"].forEach(i=>$(i).value="");render()}catch(x){fail(x)}}
+async function setSt(id,st){try{reqs=await api("requests/"+id,{method:"PATCH",body:JSON.stringify({status:st})});render()}catch(x){fail(x)}}
+async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});render()}catch(x){fail(x)}}
+function nextDay(s){const[y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d+1)).replace(/-/g,"")}
+function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+"&details="+encodeURIComponent("Status: "+r.status+(r.rem?"\n"+r.rem:""))}
+function dl(){
+ const a=reqs.filter(r=>r.status==="Approved");if(!a.length){alert("No approved requests yet.");return}
+ const ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Faculty Calendar//EN\r\n"+a.map(r=>"BEGIN:VEVENT\r\nUID:"+r.id+"@faculty-calendar\r\nDTSTAMP:"+iso(new Date()).replace(/-/g,"")+"T000000Z\r\nDTSTART;VALUE=DATE:"+r.start.replace(/-/g,"")+"\r\nDTEND;VALUE=DATE:"+nextDay(r.end)+"\r\nSUMMARY:"+(r.name+" – "+lbl(r)).replace(/[,;]/g," ")+"\r\nEND:VEVENT\r\n").join("")+"END:VCALENDAR";
+ const u=URL.createObjectURL(new Blob([ics],{type:"text/calendar"})),l=document.createElement("a");l.href=u;l.download="approved-requests.ics";l.click();URL.revokeObjectURL(u)}
+route();load();setInterval(()=>{if(!document.hidden)load()},60000);
+</script></body></html>
