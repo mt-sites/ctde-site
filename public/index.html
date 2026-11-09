@@ -119,7 +119,7 @@ async function gateGo(){
  try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
  catch(e){$("gM").textContent="Wrong password."}}
 function lockAdmin(){pw=null;resetForm();render()}
-function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save. Try again."}
+function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save (error "+(e.status||"network")+"). "+(e.status===400?"The Worker may be outdated — redeploy worker.js.":"Try again.")}
 function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
 function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
