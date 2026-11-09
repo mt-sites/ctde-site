@@ -42,7 +42,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 <main>
 <section id="admin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
- <div class="card" id="formCard"><h2>New request <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
+ <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
    <div><label>Faculty / employee name</label><input id="fName" placeholder="e.g. Juan Dela Cruz"></div>
    <div><label>Type of request</label><select id="fType"></select></div>
@@ -52,7 +52,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
    <div><label>Date requested</label><input type="date" id="fReq"></div>
   </div>
   <div style="margin-top:10px"><label>Remarks (optional)</label><input id="fRem"></div>
-  <p style="margin:12px 0 0"><button class="btn" onclick="addReq()">Submit request</button> <span id="msg" class="note"></span></p>
+  <p style="margin:12px 0 0"><button class="btn" id="sBtn" onclick="addReq()">Submit request</button> <button class="sm hide" id="cBtn" onclick="cancelEdit()">Cancel edit</button> <span id="msg" class="note"></span></p>
  </div>
  <div class="card" id="resCard"><h2>Results</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
@@ -71,7 +71,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 const TYPES=["Sick Leave","Wellness Leave","Travel Order","L&D (Learning & Development)","Vacation Leave","Official Business","Others"];
 const COL=["--c1","--c2","--c3","--c4","--c5","--c6","--c7"];
 const MN=["January","February","March","April","May","June","July","August","September","October","November","December"];
-let reqs=[],pw=null,aY,aM,vm,vy;
+let reqs=[],pw=null,editId=null,aY,aM,vm,vy;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -107,7 +107,7 @@ function render(){
  if(location.hash==="#admin"){
   const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);$("resCard").classList.toggle("hide",!ok);$("prevCard").classList.toggle("hide",!ok);
   const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
-  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${r.rem?`<div class="note">${esc(r.rem)}</div>`:""}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td><td>${ok?`<button class="sm" onclick="setSt('${r.id}','Approved')">Approve</button><button class="sm" onclick="setSt('${r.id}','Disapproved')">Disapprove</button><button class="sm" onclick="setSt('${r.id}','Pending')">Reset</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="7" class="note">No requests yet.</td></tr>`;
+  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${r.rem?`<div class="note">${esc(r.rem)}</div>`:""}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td><span class="tag st-${r.status}">${r.status}</span></td><td>${ok?`<button class="sm" onclick="setSt('${r.id}','Approved')">Approve</button><button class="sm" onclick="setSt('${r.id}','Disapproved')">Disapprove</button><button class="sm" onclick="setSt('${r.id}','Pending')">Reset</button><button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="7" class="note">No requests yet.</td></tr>`;
   cal($("calA"),aY,aM,reqs,true)}
  else{
   const q=$("vS").value.trim().toLowerCase();
@@ -118,16 +118,25 @@ async function gateGo(){
  const p=$("gP").value;if(!p)return;
  try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
  catch(e){$("gM").textContent="Wrong password."}}
-function lockAdmin(){pw=null;render()}
+function lockAdmin(){pw=null;resetForm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save. Try again."}
+function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit request";$("cBtn").classList.add("hide")}
+function cancelEdit(){resetForm();$("msg").textContent=""}
+function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
+ $("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
+ $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fRem").value=r.rem||"";
+ $("fT").textContent="Edit request";$("sBtn").textContent="Update request";$("cBtn").classList.remove("hide");$("msg").textContent="";
+ $("formCard").scrollIntoView({behavior:"smooth"})}
 async function addReq(){
  const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value||s;
  if(!name||!s){$("msg").textContent="Please enter a name and start date.";return}
  if(e<s){$("msg").textContent="End date is before start date.";return}
- try{reqs=await api("requests",{method:"POST",body:JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,rem:$("fRem").value.trim()})});
-  $("msg").textContent="Request saved.";["fName","fOther","fRem","fStart","fEnd"].forEach(i=>$(i).value="");render()}catch(x){fail(x)}}
+ const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,rem:$("fRem").value.trim()});
+ try{const wasEdit=!!editId;
+  reqs=wasEdit?await api("requests/"+editId,{method:"PATCH",body}):await api("requests",{method:"POST",body});
+  resetForm();$("msg").textContent=wasEdit?"Request updated.":"Request saved.";render()}catch(x){fail(x)}}
 async function setSt(id,st){try{reqs=await api("requests/"+id,{method:"PATCH",body:JSON.stringify({status:st})});render()}catch(x){fail(x)}}
-async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});render()}catch(x){fail(x)}}
+async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});if(editId===id)resetForm();render()}catch(x){fail(x)}}
 function nextDay(s){const[y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d+1)).replace(/-/g,"")}
 function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+"&details="+encodeURIComponent("Status: "+r.status+(r.rem?"\n"+r.rem:""))}
 function dl(){
