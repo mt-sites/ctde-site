@@ -1,7 +1,7 @@
 # Faculty Leave & Travel Calendar – Cloudflare Worker
 
 Structure: public/index.html (the site), src/worker.js (API), wrangler.toml (config).
-Viewer page: https://YOUR-SITE/#viewer   |   Admin page: https://YOUR-SITE/#admin
+Faculty page: https://YOUR-SITE/   |   Admin: the "Admin" button in the header (or https://YOUR-SITE/#admin)
 
 ## Deploy (Wrangler)
 1. npm i -g wrangler && wrangler login
