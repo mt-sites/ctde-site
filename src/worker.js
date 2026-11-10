@@ -1,7 +1,7 @@
 // Cloudflare Worker: API for the Faculty Leave & Travel Calendar.
 // Secret:  ADMIN_PASSWORD   (Settings -> Variables and Secrets -> type "Secret")
 // Binding: REQUESTS         (a KV namespace)
-const TYPES = ["Sick Leave","Wellness Leave","Travel Order","L&D (Learning & Development)","Vacation Leave","Official Business","Others"];
+const TYPES = ["Sick Leave","Wellness Leave","Travel Order","L&D (Learning & Development)","Vacation Leave","Official Business","Mandatory/Forced Leave","Solo Parent Leave","Others"];
 const STATUS = ["Pending","Approved","Disapproved"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
