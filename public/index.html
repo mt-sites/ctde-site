@@ -44,6 +44,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 <main>
 <section id="admin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
+ <nav id="aTabs" class="hide" style="padding:0"><button id="tReq" onclick="atab('req')">Requests</button><button id="tLists" onclick="atab('lists')">Types &amp; Names</button></nav>
  <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
    <div><label>Faculty / employee name *</label><select id="fName"></select></div>
@@ -59,7 +60,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
  </div>
  <div class="card" id="mgrCard"><h2>Types &amp; names</h2><div class="grid2">
   <div><label>Add type of request (color is assigned automatically)</label><div style="display:flex;gap:6px"><input id="nType" placeholder="e.g. Maternity Leave" onkeydown="if(event.key==='Enter')addType($('nType').value)"><button class="btn" onclick="addType($('nType').value)">Add</button></div><div class="mgr" id="tList"></div></div>
-  <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="nlist" id="nList"></div></div></div></div>
+  <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="nlist" id="nList"></div></div></div><p class="note" id="msg2"></p></div>
  <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
@@ -114,7 +115,7 @@ function shift(n){aM+=n;if(aM<0){aM=11;aY--}if(aM>11){aM=0;aY++}render()}
 function inMonth(r,y,m){const a=y+"-"+String(m+1).padStart(2,"0");return r.start.slice(0,7)<=a&&a<=r.end.slice(0,7)}
 function render(){
  if(location.hash==="#admin"){
-  const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);$("resCard").classList.toggle("hide",!ok);$("prevCard").classList.toggle("hide",!ok);$("mgrCard").classList.toggle("hide",!ok);fillSelects();
+  const ok=!!pw;$("gate").classList.toggle("hide",ok);const L=curTab==="lists";$("aTabs").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",!L);$("tLists").classList.toggle("on",L);$("formCard").classList.toggle("hide",!ok||L);$("resCard").classList.toggle("hide",!ok||L);$("prevCard").classList.toggle("hide",!ok||L);$("mgrCard").classList.toggle("hide",!ok||!L);fillSelects();
   const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
   $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests yet.</td></tr>`;
   cal($("calA"),aY,aM,reqs,true)}
@@ -127,8 +128,10 @@ async function gateGo(){
  const p=$("gP").value;if(!p)return;
  try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
  catch(e){$("gM").textContent="Wrong password."}}
-function lockAdmin(){pw=null;resetForm();render()}
-function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
+let curTab="req";
+function atab(t){curTab=t;render()}
+function lockAdmin(){pw=null;curTab="req";resetForm();render()}
+function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent=$("msg2").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
 function ensureOpt(sel,v){if(v&&![...sel.options].some(o=>o.value===v))sel.insertAdjacentHTML("afterbegin",`<option>${esc(v)}</option>`)}
 function hsl2hex(h,s,l){const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,"0")};return"#"+f(0)+f(8)+f(4)}
 function nextColor(){const used=new Set(cfg.types.map(t=>t.color.toLowerCase()));return PAL.find(c=>!used.has(c))||hsl2hex((cfg.types.length*137)%360,.6,.38)}
