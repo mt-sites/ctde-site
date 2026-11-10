@@ -2,9 +2,10 @@
 // Secret:  ADMIN_PASSWORD   (Settings -> Variables and Secrets -> type "Secret")
 // Binding: REQUESTS         (a KV namespace)
 const HEX = /^#[0-9a-fA-F]{6}$/;
-const DEFAULT_CFG = { names: [], types: [
+const BASE_TYPES = [
   { name: "Sick Leave", color: "#d64545" }, { name: "Wellness Leave", color: "#2e9e6b" }, { name: "Travel Order", color: "#1f5fbf" },
-  { name: "L&D (Learning & Development)", color: "#8a52c9" }, { name: "Vacation Leave", color: "#d98a1c" }, { name: "Official Business", color: "#0e9aa7" } ] };
+  { name: "L&D (Learning & Development)", color: "#8a52c9" }, { name: "Vacation Leave", color: "#d98a1c" }, { name: "Official Business", color: "#0e9aa7" } ];
+const NEW_TYPES = [{ name: "Mandatory/Forced Leave", color: "#c2185b" }, { name: "Solo Parent Leave", color: "#00796b" }];
 const STATUS = ["Pending","Approved","Disapproved"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -23,7 +24,16 @@ export default {
   async fetch(req, env) {
     const p = new URL(req.url).pathname.replace(/\/+$/, ""), m = req.method;
     const list = async () => JSON.parse((await env.REQUESTS.get("list")) || "[]");
-    const getCfg = async () => JSON.parse((await env.REQUESTS.get("config")) || "null") || DEFAULT_CFG;
+    const getCfg = async () => {
+      const c = JSON.parse((await env.REQUESTS.get("config")) || "null") || { types: BASE_TYPES.map((t) => ({ ...t })), names: [] };
+      if (!c.v) { // one-time upgrade: add the two new types and seed the names list from existing requests
+        for (const t of NEW_TYPES) if (!c.types.some((x) => x.name.toLowerCase() === t.name.toLowerCase())) c.types.push({ ...t });
+        const have = new Set(c.names.map((n) => n.toLowerCase()));
+        for (const r of await list()) if (r.name && !have.has(r.name.toLowerCase())) { have.add(r.name.toLowerCase()); c.names.push(r.name); }
+        c.names.sort((x, y) => x.localeCompare(y)); c.v = 2;
+      }
+      return c;
+    };
     const save = (l) => env.REQUESTS.put("list", JSON.stringify(l));
 
     if (p === "/api/requests" && m === "GET") return json(await list());
@@ -53,7 +63,13 @@ export default {
         if (names.length >= 500) break;
       }
       names.sort((a, c) => a.localeCompare(c));
-      const c = { types, names }; await env.REQUESTS.put("config", JSON.stringify(c)); return json(c);
+      const rn = (Array.isArray(b.renames) ? b.renames : []).map((x) => [clip(x && x.from, 100), clip(x && x.to, 100)]).filter(([f, t]) => f && t && f !== t);
+      if (rn.length) { // renaming a name also updates the requests that use it
+        const l = await list(); let ch = false;
+        for (const r of l) { const m = rn.find(([f]) => f === r.name); if (m) { r.name = m[1]; ch = true; } }
+        if (ch) await save(l);
+      }
+      const c = { v: 2, types, names }; await env.REQUESTS.put("config", JSON.stringify(c)); return json(c);
     }
 
     if (p === "/api/requests" && m === "POST") {
