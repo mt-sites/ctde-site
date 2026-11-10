@@ -35,6 +35,8 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 .chip.Pending{opacity:.65;outline:1px dashed #fff;outline-offset:-2px}.chip.Disapproved{text-decoration:line-through;opacity:.4}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:11px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
 @media(max-width:600px){.day{min-height:60px}.chip{font-size:9px}}
+.mgr{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:3px 6px 3px 10px;font-size:12px;background:var(--bg)}.pill i{width:10px;height:10px;border-radius:50%;display:inline-block}.pill button{border:0;background:none;cursor:pointer;color:var(--mut);font-size:15px;line-height:1;padding:0 2px}
+.bad{border-color:#d64545!important;background:#fdecec!important}
 .hide{display:none}
 </style></head><body>
 <header><div><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>Requests, approvals and schedule preview</p></div><button id="hb" class="hbtn" onclick="go(location.hash==='#admin'?'viewer':'admin')">Admin</button></header>
@@ -43,17 +45,20 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
  <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
-   <div><label>Faculty / employee name</label><input id="fName" placeholder="e.g. Juan Dela Cruz"></div>
-   <div><label>Type of request</label><select id="fType"></select></div>
-   <div id="otherWrap" class="hide"><label>Specify (others)</label><input id="fOther"></div>
-   <div><label>Start date</label><input type="date" id="fStart"></div>
-   <div><label>End date</label><input type="date" id="fEnd"></div>
-   <div><label>Date requested</label><input type="date" id="fReq"></div>
-   <div><label>Date approved (optional)</label><input type="date" id="fAppr"></div>
+   <div><label>Faculty / employee name *</label><select id="fName"></select></div>
+   <div><label>Type of request *</label><select id="fType"></select></div>
+   <div id="otherWrap" class="hide"><label>Specify (others) *</label><input id="fOther"></div>
+   <div><label>Start date *</label><input type="date" id="fStart"></div>
+   <div><label>End date *</label><input type="date" id="fEnd"></div>
+   <div><label>Date requested *</label><input type="date" id="fReq"></div>
+   <div><label>Date approved *</label><input type="date" id="fAppr"></div>
   </div>
-  <div style="margin-top:10px"><label>Remarks (optional)</label><textarea id="fRem" rows="2" maxlength="300" placeholder="Venue, purpose, or reason for personal leave"></textarea></div>
+  <div style="margin-top:10px"><label>Remarks *</label><textarea id="fRem" rows="2" maxlength="300" placeholder="Venue, purpose, or reason for personal leave"></textarea></div>
   <p style="margin:12px 0 0"><button class="btn" id="sBtn" onclick="addReq()">Submit</button> <button class="sm hide" id="cBtn" onclick="cancelEdit()">Cancel edit</button> <span id="msg" class="note"></span></p>
  </div>
+ <div class="card" id="mgrCard"><h2>Types &amp; names</h2><div class="grid2">
+  <div><label>Add type of request (color is assigned automatically)</label><div style="display:flex;gap:6px"><input id="nType" placeholder="e.g. Maternity Leave" onkeydown="if(event.key==='Enter')addType($('nType').value)"><button class="btn" onclick="addType($('nType').value)">Add</button></div><div class="mgr" id="tList"></div></div>
+  <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="mgr" id="nList"></div></div></div></div>
  <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
@@ -68,8 +73,10 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 </section>
 </main>
 <script>
-const TYPES=["Sick Leave","Wellness Leave","Travel Order","L&D (Learning & Development)","Vacation Leave","Official Business","Others"];
-const COL=["--c1","--c2","--c3","--c4","--c5","--c6","--c7"];
+const PAL=["#c2185b","#00796b","#5e35b1","#ef6c00","#2e7d32","#0277bd","#6d4c41","#455a64","#9e9d24","#d81b60","#00838f","#7b1fa2"];
+let cfg={names:[],types:[["Sick Leave","#d64545"],["Wellness Leave","#2e9e6b"],["Travel Order","#1f5fbf"],["L&D (Learning & Development)","#8a52c9"],["Vacation Leave","#d98a1c"],["Official Business","#0e9aa7"]].map(([name,color])=>({name,color}))};
+const typeList=()=>[...cfg.types.map(t=>t.name),"Others"];
+const colorOf=t=>(cfg.types.find(x=>x.name===t)||{color:"#777777"}).color;
 const MN=["January","February","March","April","May","June","July","August","September","October","November","December"];
 let reqs=[],pw=null,editId=null,aY,aM,vm,vy;
 const $=id=>document.getElementById(id);
@@ -78,12 +85,13 @@ const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+Stri
 const fmt=s=>{if(!s)return "—";const[y,m,d]=s.split("-");return MN[m-1].slice(0,3)+" "+(+d)+", "+y};
 const range=r=>r.start===r.end?fmt(r.start):fmt(r.start)+" – "+fmt(r.end);
 const lbl=r=>r.type==="Others"&&r.other?r.other:r.type;
-const col=r=>"var("+COL[Math.max(0,TYPES.indexOf(r.type))]+")";
+const col=r=>colorOf(r.type);
 const now=new Date();aY=vy=now.getFullYear();aM=vm=now.getMonth();
-$("fType").innerHTML=TYPES.map(t=>`<option>${esc(t)}</option>`).join("");
+fillSelects();
 $("vM").innerHTML=MN.map((m,i)=>`<option value="${i}">${m}</option>`).join("");
 $("vM").value=vm;$("vY").value=vy;$("fReq").value=iso(now);
-$("fType").onchange=()=>$("otherWrap").classList.toggle("hide",$("fType").value!=="Others");
+$("fType").onchange=()=>{if($("fType").value==="__add__"){addType(prompt("New type of request:"));return}$("otherWrap").classList.toggle("hide",$("fType").value!=="Others")};
+$("fName").onchange=()=>{if($("fName").value==="__add__")addName(prompt("New faculty / employee name:"))};
 $("vM").onchange=()=>{vm=+$("vM").value;render()};$("vY").oninput=()=>{const y=+$("vY").value;if(y>1999&&y<2101){vy=y;render()}};$("vS").oninput=render;
 function go(v){location.hash=v}
 function route(){const v=location.hash==="#admin"?"admin":"viewer";$("admin").classList.toggle("hide",v!=="admin");$("viewer").classList.toggle("hide",v!=="viewer");$("hb").textContent=v==="admin"?"← Faculty View":"Admin";render()}
@@ -91,7 +99,7 @@ addEventListener("hashchange",route);
 async function api(path,opt={}){
  const r=await fetch("/api/"+path,{...opt,headers:{"Content-Type":"application/json",...(pw?{"X-Admin-Password":pw}:{})}});
  if(!r.ok){const e=new Error(r.status);e.status=r.status;try{e.msg=(await r.json()).error}catch(_){}throw e}return r.json()}
-async function load(){try{reqs=await api("requests")}catch(e){}render()}
+async function load(){try{reqs=await api("requests")}catch(e){}try{cfg=await api("config")}catch(e){}render()}
 function cal(el,y,m,list,nav){
  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay()),today=iso(new Date());
  let h=`<div class="calhead">${nav?`<button class="sm" onclick="shift(-1)">◀</button>`:""}<h3>${MN[m]} ${y}</h3>${nav?`<button class="sm" onclick="shift(1)">Next ▶</button>`:""}</div><div class="cal">`;
@@ -99,13 +107,13 @@ function cal(el,y,m,list,nav){
  for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);if(i>=35&&d.getMonth()!==m)break;const k=iso(d);
   const ch=list.filter(r=>r.start<=k&&k<=r.end).map(r=>`<span class="chip ${r.status}" style="background:${col(r)}" title="${esc(r.name+" – "+lbl(r)+" ("+r.status+")")}">${esc(r.name)} · ${esc(lbl(r))}</span>`).join("");
   h+=`<div class="day${d.getMonth()!==m?" out":""}${k===today?" today":""}"><b>${d.getDate()}</b>${ch}</div>`}
- h+=`</div><div class="legend">${TYPES.map((t,i)=>`<span><i style="background:var(${COL[i]})"></i>${esc(t)}</span>`).join("")}<span>Faded/dashed = pending · struck = disapproved</span></div>`;
+ h+=`</div><div class="legend">${typeList().map(t=>`<span><i style="background:${colorOf(t)}"></i>${esc(t)}</span>`).join("")}<span>Faded/dashed = pending · struck = disapproved</span></div>`;
  el.innerHTML=h}
 function shift(n){aM+=n;if(aM<0){aM=11;aY--}if(aM>11){aM=0;aY++}render()}
 function inMonth(r,y,m){const a=y+"-"+String(m+1).padStart(2,"0");return r.start.slice(0,7)<=a&&a<=r.end.slice(0,7)}
 function render(){
  if(location.hash==="#admin"){
-  const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);$("resCard").classList.toggle("hide",!ok);$("prevCard").classList.toggle("hide",!ok);
+  const ok=!!pw;$("gate").classList.toggle("hide",ok);$("formCard").classList.toggle("hide",!ok);$("resCard").classList.toggle("hide",!ok);$("prevCard").classList.toggle("hide",!ok);$("mgrCard").classList.toggle("hide",!ok);fillSelects();
   const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
   $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests yet.</td></tr>`;
   cal($("calA"),aY,aM,reqs,true)}
@@ -120,17 +128,46 @@ async function gateGo(){
  catch(e){$("gM").textContent="Wrong password."}}
 function lockAdmin(){pw=null;resetForm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
+function ensureOpt(sel,v){if(v&&![...sel.options].some(o=>o.value===v))sel.insertAdjacentHTML("afterbegin",`<option>${esc(v)}</option>`)}
+function hsl2hex(h,s,l){const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,"0")};return"#"+f(0)+f(8)+f(4)}
+function nextColor(){const used=new Set(cfg.types.map(t=>t.color.toLowerCase()));return PAL.find(c=>!used.has(c))||hsl2hex((cfg.types.length*137)%360,.6,.38)}
+function allNames(){const m=new Map();[...cfg.names,...reqs.map(r=>r.name)].forEach(n=>{if(n&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),n)});return[...m.values()].sort((a,b)=>a.localeCompare(b))}
+function fillSelects(){
+ const ft=$("fType"),fn=$("fName"),tv=ft.value,nv=fn.value;
+ ft.innerHTML=typeList().map(t=>`<option>${esc(t)}</option>`).join("")+`<option value="__add__">＋ Add new type…</option>`;
+ fn.innerHTML=`<option value="">— Select name —</option>`+allNames().map(n=>`<option>${esc(n)}</option>`).join("")+`<option value="__add__">＋ Add new name…</option>`;
+ if(tv&&tv!=="__add__"){ensureOpt(ft,tv);ft.value=tv}
+ if(nv&&nv!=="__add__"){ensureOpt(fn,nv);fn.value=nv}
+ $("tList").innerHTML=cfg.types.map((t,i)=>`<span class="pill"><i style="background:${t.color}"></i>${esc(t.name)}<button title="Remove" onclick="delType(${i})">×</button></span>`).join("")||'<span class="note">No types yet.</span>';
+ $("nList").innerHTML=cfg.names.map((n,i)=>`<span class="pill">${esc(n)}<button title="Remove" onclick="delName(${i})">×</button></span>`).join("")||'<span class="note">No names yet.</span>'}
+async function saveCfg(){try{cfg=await api("config",{method:"PUT",body:JSON.stringify(cfg)});fillSelects();render()}catch(e){fail(e)}}
+async function addType(v){v=String(v||"").trim().slice(0,60);
+ if(!v){fillSelects();return}
+ if(v.toLowerCase()==="others"||cfg.types.some(t=>t.name.toLowerCase()===v.toLowerCase())){alert("That type already exists.");fillSelects();return}
+ cfg.types.push({name:v,color:nextColor()});$("nType").value="";await saveCfg();$("fType").value=v;$("otherWrap").classList.add("hide")}
+async function addName(v){v=String(v||"").trim().slice(0,100);
+ if(!v){fillSelects();return}
+ if(!cfg.names.some(n=>n.toLowerCase()===v.toLowerCase()))cfg.names.push(v);
+ $("nName").value="";await saveCfg();const m=allNames().find(n=>n.toLowerCase()===v.toLowerCase());if(m)$("fName").value=m}
+async function delType(i){if(!confirm("Remove this type from the list? Existing requests keep their type."))return;cfg.types.splice(i,1);await saveCfg()}
+async function delName(i){if(!confirm("Remove this name from the list? Existing requests are not changed."))return;cfg.names.splice(i,1);await saveCfg()}
+document.addEventListener("input",e=>e.target.classList&&e.target.classList.remove("bad"));document.addEventListener("change",e=>e.target.classList&&e.target.classList.remove("bad"));
 function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
 function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
- $("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
+ ensureOpt($("fName"),r.name);ensureOpt($("fType"),r.type);$("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
  $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fRem").value=allRem(r);$("fAppr").value=r.approved||"";
  $("fT").textContent="Edit request";$("sBtn").textContent="Update request";$("cBtn").classList.remove("hide");$("msg").textContent="";
  $("formCard").scrollIntoView({behavior:"smooth"})}
 async function addReq(){
- const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value||s;
- if(!name||!s){$("msg").textContent="Please enter a name and start date.";return}
- if(e<s){$("msg").textContent="End date is before start date.";return}
+ const need=[["fName","name"],["fType","type of request"],["fStart","start date"],["fEnd","end date"],["fReq","date requested"],["fAppr","date approved"],["fRem","remarks"]];
+ if($("fType").value==="Others")need.push(["fOther","the “specify” field"]);
+ ["fName","fType","fStart","fEnd","fReq","fAppr","fRem","fOther"].forEach(i=>$(i).classList.remove("bad"));
+ const miss=need.filter(([i])=>!$(i).value.trim()||$(i).value==="__add__");
+ miss.forEach(([i])=>$(i).classList.add("bad"));
+ if(miss.length){$("msg").textContent="Please fill in: "+miss.map(m=>m[1]).join(", ")+".";$(miss[0][0]).focus();return}
+ const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value;
+ if(e<s){$("msg").textContent="End date is before start date.";$("fEnd").classList.add("bad");return}
  const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,approved:$("fAppr").value,rem:$("fRem").value.trim()});
  try{const wasEdit=!!editId;
   reqs=wasEdit?await api("requests/"+editId,{method:"PATCH",body}):await api("requests",{method:"POST",body});
