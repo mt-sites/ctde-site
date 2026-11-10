@@ -90,7 +90,7 @@ function route(){const v=location.hash==="#admin"?"admin":"viewer";$("admin").cl
 addEventListener("hashchange",route);
 async function api(path,opt={}){
  const r=await fetch("/api/"+path,{...opt,headers:{"Content-Type":"application/json",...(pw?{"X-Admin-Password":pw}:{})}});
- if(!r.ok){const e=new Error(r.status);e.status=r.status;throw e}return r.json()}
+ if(!r.ok){const e=new Error(r.status);e.status=r.status;try{e.msg=(await r.json()).error}catch(_){}throw e}return r.json()}
 async function load(){try{reqs=await api("requests")}catch(e){}render()}
 function cal(el,y,m,list,nav){
  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay()),today=iso(new Date());
@@ -119,7 +119,7 @@ async function gateGo(){
  try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
  catch(e){$("gM").textContent="Wrong password."}}
 function lockAdmin(){pw=null;resetForm();render()}
-function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save (error "+(e.status||"network")+"). "+(e.status===400?"The Worker may be outdated — redeploy worker.js.":"Try again.")}
+function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
 function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
 function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
@@ -138,14 +138,30 @@ async function addReq(){
 async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});if(editId===id)resetForm();render()}catch(x){fail(x)}}
 function allRem(r){return [r.rem,r.venue&&"Venue: "+r.venue,r.purpose&&"Purpose: "+r.purpose,r.reason&&"Reason: "+r.reason].filter(Boolean).join(" · ")}
 function details(r){const t=allRem(r);return t?`<div class="note">${esc(t)}</div>`:""}
-function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
+const XML=v=>String(v??"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const serial=v=>v?Math.round((Date.UTC(+v.slice(0,4),+v.slice(5,7)-1,+v.slice(8,10))-Date.UTC(1899,11,30))/864e5):null;
+const XFS='<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top"/></xf><xf numFmtId="164" fontId="3" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="top"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>';
+function fillSheet(sheet,styles,table,list){
+ const tx=(c,v,st)=>v?`<c r="${c}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${XML(v)}</t></is></c>`:`<c r="${c}" s="${st}"/>`;
+ const dt=(c,v)=>{const n=serial(v);return n==null?`<c r="${c}" s="5"/>`:`<c r="${c}" s="5"><v>${n}</v></c>`};
+ let rows="";
+ list.forEach((r,i)=>{const n=9+i;rows+=`<row r="${n}" spans="2:8">`+tx("B"+n,r.name,4)+tx("C"+n,lbl(r),6)+dt("D"+n,r.start)+dt("E"+n,r.end)+tx("F"+n,allRem(r),6)+dt("G"+n,r.requested)+dt("H"+n,r.approved)+"</row>"});
+ const last=8+list.length;
+ return{sheet:sheet.replace('<dimension ref="B1:H8"/>',`<dimension ref="B1:H${last}"/>`).replace("</sheetData>",rows+"</sheetData>"),
+  styles:styles.replace("<fonts",'<numFmts count="1"><numFmt numFmtId="164" formatCode="mmm d, yyyy"/></numFmts><fonts').replace('<cellXfs count="4">','<cellXfs count="7">').replace("</cellXfs>",XFS+"</cellXfs>"),
+  table:table.replace(/B8:H9/g,"B8:H"+last)}}
+function loadJSZip(){return window.JSZip?Promise.resolve():new Promise((ok,no)=>{const e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
 async function xl(){
  if(!reqs.length){alert("No requests to export yet.");return}
- try{await loadXLSX()}catch(e){alert("Could not load the Excel library. Check your internet connection and try again.");return}
- const rows=[...reqs].sort((a,b)=>a.start.localeCompare(b.start)).map(r=>({"Name":r.name,"Type of request":lbl(r),"Start date":r.start,"End date":r.end,"Remarks":allRem(r),"Date requested":r.requested||"","Date approved":r.approved||""}));
- const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=[26,26,12,12,40,14,14].map(w=>({wch:w}));
- const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Requests");
- XLSX.writeFile(wb,"faculty-requests-"+iso(new Date())+".xlsx")}
+ try{
+  await loadJSZip();
+  const res=await fetch("/Faculty_Requests_template.xlsx");if(!res.ok)throw new Error("template");
+  const z=await JSZip.loadAsync(await res.arrayBuffer()),rd=p=>z.file(p).async("string");
+  const o=fillSheet(await rd("xl/worksheets/sheet1.xml"),await rd("xl/styles.xml"),await rd("xl/tables/table1.xml"),[...reqs].sort((a,b)=>a.start.localeCompare(b.start)));
+  z.file("xl/worksheets/sheet1.xml",o.sheet);z.file("xl/styles.xml",o.styles);z.file("xl/tables/table1.xml",o.table);
+  const blob=await z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",compression:"DEFLATE"});
+  const u=URL.createObjectURL(blob),l=document.createElement("a");l.href=u;l.download="Faculty_Requests_"+iso(new Date())+".xlsx";l.click();setTimeout(()=>URL.revokeObjectURL(u),2000)
+ }catch(e){alert("Could not create the Excel file. Make sure Faculty_Requests_template.xlsx is deployed in the public folder and you are online.")}}
 function nextDay(s){const[y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d+1)).replace(/-/g,"")}
 function gcal(r){return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(r.name+" – "+lbl(r))+"&dates="+r.start.replace(/-/g,"")+"/"+nextDay(r.end)+"&details="+encodeURIComponent("Status: "+r.status+(allRem(r)?"\n"+allRem(r):""))}
 function dl(){
