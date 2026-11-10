@@ -1,7 +1,10 @@
 // Cloudflare Worker: API for the Faculty Leave & Travel Calendar.
 // Secret:  ADMIN_PASSWORD   (Settings -> Variables and Secrets -> type "Secret")
 // Binding: REQUESTS         (a KV namespace)
-const TYPES = ["Sick Leave","Wellness Leave","Travel Order","L&D (Learning & Development)","Vacation Leave","Official Business","Mandatory/Forced Leave","Solo Parent Leave","Others"];
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const DEFAULT_CFG = { names: [], types: [
+  { name: "Sick Leave", color: "#d64545" }, { name: "Wellness Leave", color: "#2e9e6b" }, { name: "Travel Order", color: "#1f5fbf" },
+  { name: "L&D (Learning & Development)", color: "#8a52c9" }, { name: "Vacation Leave", color: "#d98a1c" }, { name: "Official Business", color: "#0e9aa7" } ] };
 const STATUS = ["Pending","Approved","Disapproved"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -20,9 +23,12 @@ export default {
   async fetch(req, env) {
     const p = new URL(req.url).pathname.replace(/\/+$/, ""), m = req.method;
     const list = async () => JSON.parse((await env.REQUESTS.get("list")) || "[]");
+    const getCfg = async () => JSON.parse((await env.REQUESTS.get("config")) || "null") || DEFAULT_CFG;
     const save = (l) => env.REQUESTS.put("list", JSON.stringify(l));
 
     if (p === "/api/requests" && m === "GET") return json(await list());
+    if (p === "/api/config" && m === "GET") return json(await getCfg());
+    if (p === "/api/version") return json({ version: "edit-v4" }); // open /api/version to confirm this Worker is deployed
 
     if (!env.ADMIN_PASSWORD) return json({ error: "ADMIN_PASSWORD secret is not set" }, 500);
     const ok = await same(req.headers.get("X-Admin-Password") || "", env.ADMIN_PASSWORD);
@@ -30,15 +36,35 @@ export default {
 
     if (p === "/api/login" && m === "POST") return json({ ok: true });
 
+    if (p === "/api/config" && m === "PUT") {
+      let b; try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+      const seen = new Set(), types = [];
+      for (const t of Array.isArray(b.types) ? b.types : []) {
+        const n = clip(t && t.name, 60), k = n.toLowerCase();
+        if (!n || k === "others" || seen.has(k)) continue;
+        seen.add(k); types.push({ name: n, color: HEX.test(t.color) ? t.color : "#777777" });
+        if (types.length >= 40) break;
+      }
+      const ns = new Set(), names = [];
+      for (const x of Array.isArray(b.names) ? b.names : []) {
+        const n = clip(x, 100), k = n.toLowerCase();
+        if (!n || ns.has(k)) continue;
+        ns.add(k); names.push(n);
+        if (names.length >= 500) break;
+      }
+      names.sort((a, c) => a.localeCompare(c));
+      const c = { types, names }; await env.REQUESTS.put("config", JSON.stringify(c)); return json(c);
+    }
+
     if (p === "/api/requests" && m === "POST") {
       let b; try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
       const r = {
-        id: crypto.randomUUID(), name: clip(b.name, 100), type: TYPES.includes(b.type) ? b.type : "Others",
+        id: crypto.randomUUID(), name: clip(b.name, 100), type: clip(b.type, 60) || "Others",
         other: clip(b.other, 100), start: b.start, end: b.end || b.start,
         requested: DATE.test(b.requested) ? b.requested : today(), approved: DATE.test(b.approved) ? b.approved : "", status: DATE.test(b.approved) ? "Approved" : "Pending", rem: clip(b.rem, 300),
         venue: clip(b.venue, 150), purpose: clip(b.purpose, 200), reason: clip(b.reason, 200),
       };
-      if (!r.name || !DATE.test(r.start) || !DATE.test(r.end) || r.end < r.start) return json({ error: "invalid input" }, 400);
+      if (!r.name || !DATE.test(r.start) || !DATE.test(b.end) || r.end < r.start || !DATE.test(b.requested) || !DATE.test(b.approved) || !r.rem || (r.type === "Others" && !r.other)) return json({ error: "all fields are required" }, 400);
       const l = await list(); l.push(r); await save(l); return json(l);
     }
 
@@ -55,10 +81,10 @@ export default {
           if (b.status !== r.status) { r.status = b.status; r.approved = b.status === "Approved" ? today() : ""; }
         }
         if ("name" in b) {
-          const e = { name: clip(b.name, 100), type: TYPES.includes(b.type) ? b.type : "Others", other: clip(b.other, 100),
+          const e = { name: clip(b.name, 100), type: clip(b.type, 60) || "Others", other: clip(b.other, 100),
             start: b.start, end: b.end || b.start, requested: DATE.test(b.requested) ? b.requested : r.requested, rem: "rem" in b ? clip(b.rem, 300) : r.rem,
             venue: clip(b.venue, 150), purpose: clip(b.purpose, 200), reason: clip(b.reason, 200) };
-          if (!e.name || !DATE.test(e.start) || !DATE.test(e.end) || e.end < e.start) return json({ error: "invalid input" }, 400);
+          if (!e.name || !DATE.test(e.start) || !DATE.test(b.end) || e.end < e.start || !DATE.test(b.requested) || !DATE.test(b.approved) || !e.rem || (e.type === "Others" && !e.other)) return json({ error: "all fields are required" }, 400);
           Object.assign(r, e);
           if (DATE.test(b.approved)) { r.approved = b.approved; r.status = "Approved"; }
           else if (r.status === "Approved") { r.status = "Pending"; r.approved = ""; }
