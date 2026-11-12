@@ -9,3 +9,6 @@ run_worker_first = ["/api/*"]
 [[kv_namespaces]]
 binding = "REQUESTS"
 id = "069bf6e2b3c14191872c18eacd9fe79c"
+
+[triggers]
+crons = ["0 16 * * *"]   # daily backup at midnight Philippine time (16:00 UTC)
