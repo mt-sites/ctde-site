@@ -13,7 +13,7 @@ header{background:var(--acc);color:#fff;padding:14px 16px;display:flex;align-ite
 nav{display:flex;gap:6px;padding:10px 16px 0;max-width:1100px;margin:auto}
 nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
 nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-main{max-width:1100px;margin:auto;padding:12px 16px 40px;display:grid;gap:14px}
+main{max-width:1500px;margin:auto;padding:12px 16px 40px;display:grid;gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
 .card h2{margin:0 0 10px;font-size:16px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
@@ -42,6 +42,8 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;position:sticky;top:10px}nav.side button{text-align:left;width:100%}
 @media(max-width:700px){.adm{grid-template-columns:1fr}nav.side{flex-direction:row;position:static}nav.side button{flex:1;text-align:center;padding:8px 4px;font-size:13px}}
 .mrow td{background:var(--bg);font-weight:700;cursor:pointer}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.split table{min-width:540px}#viewer{max-width:1100px;width:100%;justify-self:center}
+@media(max-width:1000px){.split{grid-template-columns:1fr}}
 .hide{display:none}
 </style></head><body>
 <header><div><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>Requests, approvals and schedule preview</p></div><button id="hb" class="hbtn" onclick="go(location.hash==='#admin'?'viewer':'admin')">Admin</button></header>
@@ -66,9 +68,11 @@ nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);borde
  <div class="card" id="mgrCard"><h2>Types &amp; names</h2><div class="grid2">
   <div><label>Add type of request (color is assigned automatically)</label><div style="display:flex;gap:6px"><input id="nType" placeholder="e.g. Maternity Leave" onkeydown="if(event.key==='Enter')addType($('nType').value)"><button class="btn" onclick="addType($('nType').value)">Add</button></div><div class="mgr" id="tList"></div></div>
   <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="nlist" id="nList"></div></div></div><p class="note" id="msg2"></p></div>
+ <div class="split" id="splitWrap">
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
  <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><input id="rQ" placeholder="🔍 Search name across all months (blank = month shown in the calendar)" oninput="render()" style="margin-bottom:6px"><div id="rCount" class="note" style="margin:0 0 8px"></div><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
+</div>
 </div></div>
 </section>
 <section id="viewer" class="hide">
@@ -124,7 +128,7 @@ function togM(k){closed.has(k)?closed.delete(k):closed.add(k);render()}
 function rrow(r,ok){return `<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`}
 function render(){
  if(location.hash==="#admin"){
-  const ok=!!pw;$("gate").classList.toggle("hide",ok);const L=curTab==="lists";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",!L);$("tLists").classList.toggle("on",L);$("formCard").classList.toggle("hide",!ok||L);$("resCard").classList.toggle("hide",!ok||L);$("prevCard").classList.toggle("hide",!ok||L);$("mgrCard").classList.toggle("hide",!ok||!L);fillSelects();
+  const ok=!!pw;$("gate").classList.toggle("hide",ok);const L=curTab==="lists";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",!L);$("tLists").classList.toggle("on",L);$("formCard").classList.toggle("hide",!ok||L);$("resCard").classList.toggle("hide",!ok||L);$("prevCard").classList.toggle("hide",!ok||L);$("mgrCard").classList.toggle("hide",!ok||!L);$("splitWrap").classList.toggle("hide",!ok||L);fillSelects();
   const q=($("rQ").value||"").trim().toLowerCase(),found=reqs.filter(r=>q?r.name.toLowerCase().includes(q):inMonth(r,aY,aM)).sort((a,b)=>a.start.localeCompare(b.start)),gr={};
   const gk=r=>q?r.start.slice(0,7):aY+"-"+String(aM+1).padStart(2,"0");found.forEach(r=>(gr[gk(r)]=gr[gk(r)]||[]).push(r));
   let h="";Object.keys(gr).sort().forEach(k=>{const[y,m]=k.split("-"),shut=!q&&closed.has(k);
