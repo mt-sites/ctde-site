@@ -50,7 +50,7 @@ nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);borde
 <main>
 <section id="admin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
- <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
+ <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button id="tComm" onclick="atab('comms')">📨 Incoming Communications</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
 <div class="admc">
  <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
@@ -72,6 +72,22 @@ nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);borde
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
  <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><input id="rQ" placeholder="🔍 Search name across all months (blank = month shown in the calendar)" oninput="render()" style="margin-bottom:6px"><div id="rCount" class="note" style="margin:0 0 8px"></div><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
+</div>
+<div id="commsWrap" class="hide">
+ <div class="card"><h2 id="mT">Incoming communication</h2>
+  <div class="grid2">
+   <div><label>Date received *</label><input type="date" id="mDate"></div>
+   <div><label>Type of document *</label><select id="mType"></select></div>
+   <div id="mSubWrap" class="hide"><label id="mSubL">Sub-type *</label><select id="mSub"></select></div>
+   <div id="mOtherWrap" class="hide"><label>Specify (others) *</label><input id="mOther"></div>
+   <div><label>From *</label><input id="mFrom" placeholder="Sender / office"></div>
+  </div>
+  <div style="margin-top:10px"><label>Subject *</label><input id="mSubject"></div>
+  <div style="margin-top:10px"><label>Action needed / Remarks</label><textarea id="mAction" rows="2" maxlength="500"></textarea></div>
+  <p style="margin:12px 0 0"><button class="btn" id="mBtn" onclick="saveComm()">Submit</button> <button class="sm hide" id="mCancel" onclick="resetComm()">Cancel edit</button> <span id="mMsg" class="note"></span></p>
+ </div>
+ <div class="card" style="margin-top:14px"><h2>Incoming communications</h2><input id="mQ" placeholder="🔍 Search any field: date, type, subject, from, action…" oninput="renderComms()" style="margin-bottom:6px"><div id="mCount" class="note" style="margin:0 0 8px"></div>
+  <div class="scroll"><table><thead><tr><th>Date received</th><th>Type of document</th><th>Subject</th><th>From</th><th>Action needed / Remarks</th><th>Actions</th></tr></thead><tbody id="mRows"></tbody></table></div></div>
 </div>
 </div></div>
 </section>
@@ -111,7 +127,7 @@ addEventListener("hashchange",route);
 async function api(path,opt={}){
  const r=await fetch("/api/"+path,{...opt,headers:{"Content-Type":"application/json",...(pw?{"X-Admin-Password":pw}:{})}});
  if(!r.ok){const e=new Error(r.status);e.status=r.status;try{e.msg=(await r.json()).error}catch(_){}throw e}return r.json()}
-async function load(){try{reqs=await api("requests")}catch(e){}try{cfg=await api("config")}catch(e){}render()}
+async function load(){try{reqs=await api("requests")}catch(e){}try{cfg=await api("config")}catch(e){}if(pw&&curTab==="comms"){try{comms=await api("comms")}catch(e){}}render()}
 function cal(el,y,m,list,nav){
  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay()),today=iso(new Date());
  let h=`<div class="calhead">${nav?`<button class="sm" onclick="shift(-1)">◀</button>`:""}<h3>${MN[m]} ${y}</h3>${nav?`<button class="sm" onclick="shift(1)">Next ▶</button>`:""}</div><div class="cal">`;
@@ -128,7 +144,7 @@ function togM(k){closed.has(k)?closed.delete(k):closed.add(k);render()}
 function rrow(r,ok){return `<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`}
 function render(){
  if(location.hash==="#admin"){
-  const ok=!!pw;$("gate").classList.toggle("hide",ok);const L=curTab==="lists";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",!L);$("tLists").classList.toggle("on",L);$("formCard").classList.toggle("hide",!ok||L);$("resCard").classList.toggle("hide",!ok||L);$("prevCard").classList.toggle("hide",!ok||L);$("mgrCard").classList.toggle("hide",!ok||!L);$("splitWrap").classList.toggle("hide",!ok||L);fillSelects();
+  const ok=!!pw;$("gate").classList.toggle("hide",ok);const T=curTab,R=T==="req";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",R);$("tLists").classList.toggle("on",T==="lists");$("tComm").classList.toggle("on",T==="comms");$("formCard").classList.toggle("hide",!ok||!R);$("splitWrap").classList.toggle("hide",!ok||!R);$("mgrCard").classList.toggle("hide",!ok||T!=="lists");$("commsWrap").classList.toggle("hide",!ok||T!=="comms");renderComms();fillSelects();
   const q=($("rQ").value||"").trim().toLowerCase(),found=reqs.filter(r=>q?r.name.toLowerCase().includes(q):inMonth(r,aY,aM)).sort((a,b)=>a.start.localeCompare(b.start)),gr={};
   const gk=r=>q?r.start.slice(0,7):aY+"-"+String(aM+1).padStart(2,"0");found.forEach(r=>(gr[gk(r)]=gr[gk(r)]||[]).push(r));
   let h="";Object.keys(gr).sort().forEach(k=>{const[y,m]=k.split("-"),shut=!q&&closed.has(k);
@@ -147,8 +163,40 @@ async function gateGo(){
  try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
  catch(e){$("gM").textContent="Wrong password."}}
 let curTab="req";
-function atab(t){curTab=t;render()}
-function lockAdmin(){pw=null;curTab="req";resetForm();render()}
+function atab(t){curTab=t;render();if(t==="comms")loadComms()}
+const DOC={"Communication":["Internal","External"],"MEMO":["Administrative","Institutional","VPAA","Others"],"T.O.":["Office of the President","VPAA"],"Endorsement":null,"Others":null};
+const SUBL={"Communication":"Internal / External","MEMO":"Memo category","T.O.":"Issued by"};
+let comms=[],mEdit=null;
+const dlabel=c=>c.type+(c.sub?" – "+c.sub:"")+(c.other?" – "+c.other:"");
+$("mType").innerHTML='<option value="">— Select type —</option>'+Object.keys(DOC).map(t=>`<option>${esc(t)}</option>`).join("");
+$("mType").onchange=()=>mTypeChange();
+function mTypeChange(){const t=$("mType").value,subs=DOC[t];
+ $("mSubWrap").classList.toggle("hide",!subs);$("mOtherWrap").classList.toggle("hide",t!=="Others");
+ if(subs){$("mSubL").textContent=SUBL[t]+" *";$("mSub").innerHTML='<option value="">— Select —</option>'+subs.map(x=>`<option>${esc(x)}</option>`).join("")}}
+async function loadComms(){if(!pw)return;try{comms=await api("comms")}catch(e){if(e.status===401){pw=null;render()}}renderComms()}
+function renderComms(){
+ const q=$("mQ").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+ const hay=c=>[c.received,fmt(c.received),dlabel(c),c.type,c.sub,c.other,c.subject,c.from,c.action].join(" ").toLowerCase();
+ const l=comms.filter(c=>q.every(t=>hay(c).includes(t))).sort((a,b)=>b.received.localeCompare(a.received));
+ $("mRows").innerHTML=l.map(c=>`<tr><td>${fmt(c.received)}</td><td>${esc(dlabel(c))}</td><td>${esc(c.subject)}</td><td>${esc(c.from)}</td><td>${esc(c.action)}</td><td><button class="sm" onclick="editComm('${c.id}')">Edit</button><button class="sm" onclick="delComm('${c.id}')">Delete</button></td></tr>`).join("")||`<tr><td colspan="6" class="note">${q.length?"No communications match your search.":"No communications recorded yet."}</td></tr>`;
+ $("mCount").textContent=q.length?l.length+" of "+comms.length+" match":comms.length+" record"+(comms.length===1?"":"s")}
+function resetComm(){mEdit=null;["mType","mOther","mFrom","mSubject","mAction"].forEach(i=>$(i).value="");$("mDate").value=iso(new Date());mTypeChange();$("mT").textContent="Incoming communication";$("mBtn").textContent="Submit";$("mCancel").classList.add("hide");$("mMsg").textContent=""}
+function editComm(id){const c=comms.find(x=>x.id===id);if(!c)return;mEdit=id;
+ $("mDate").value=c.received;$("mType").value=c.type;mTypeChange();if(c.sub)$("mSub").value=c.sub;$("mOther").value=c.other||"";$("mFrom").value=c.from;$("mSubject").value=c.subject;$("mAction").value=c.action||"";
+ $("mT").textContent="Edit communication";$("mBtn").textContent="Update";$("mCancel").classList.remove("hide");$("mMsg").textContent="";$("mT").scrollIntoView({behavior:"smooth"})}
+function commFail(e){if(e.status===401){pw=null;render()}else $("mMsg").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+")."}
+async function saveComm(){
+ const t=$("mType").value,subs=DOC[t],ids=["mDate","mType","mSub","mOther","mFrom","mSubject"];
+ const need=[["mDate","date received"],["mType","type of document"],["mFrom","from"],["mSubject","subject"]];
+ if(subs)need.push(["mSub",SUBL[t].toLowerCase()]);
+ if(t==="Others")need.push(["mOther","the “specify” field"]);
+ ids.forEach(i=>$(i).classList.remove("bad"));
+ const miss=need.filter(([i])=>!$(i).value.trim());miss.forEach(([i])=>$(i).classList.add("bad"));
+ if(miss.length){$("mMsg").textContent="Please fill in: "+miss.map(m=>m[1]).join(", ")+".";$(miss[0][0]).focus();return}
+ const body=JSON.stringify({received:$("mDate").value,type:t,sub:subs?$("mSub").value:"",other:t==="Others"?$("mOther").value.trim():"",subject:$("mSubject").value.trim(),from:$("mFrom").value.trim(),action:$("mAction").value.trim()});
+ try{const was=!!mEdit;comms=await api(was?"comms/"+mEdit:"comms",{method:was?"PATCH":"POST",body});resetComm();$("mMsg").textContent=was?"Updated.":"Saved.";renderComms()}catch(e){commFail(e)}}
+async function delComm(id){if(!confirm("Delete this record?"))return;try{comms=await api("comms/"+id,{method:"DELETE"});if(mEdit===id)resetComm();renderComms()}catch(e){commFail(e)}}
+function lockAdmin(){pw=null;curTab="req";comms=[];resetForm();resetComm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent=$("msg2").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
 function ensureOpt(sel,v){if(v&&![...sel.options].some(o=>o.value===v))sel.insertAdjacentHTML("afterbegin",`<option>${esc(v)}</option>`)}
 function hsl2hex(h,s,l){const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,"0")};return"#"+f(0)+f(8)+f(4)}
@@ -231,5 +279,5 @@ function dl(){
  const a=reqs.filter(r=>r.status==="Approved");if(!a.length){alert("No approved requests yet.");return}
  const ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Faculty Calendar//EN\r\n"+a.map(r=>"BEGIN:VEVENT\r\nUID:"+r.id+"@faculty-calendar\r\nDTSTAMP:"+iso(new Date()).replace(/-/g,"")+"T000000Z\r\nDTSTART;VALUE=DATE:"+r.start.replace(/-/g,"")+"\r\nDTEND;VALUE=DATE:"+nextDay(r.end)+"\r\nSUMMARY:"+(r.name+" – "+lbl(r)).replace(/[,;]/g," ")+"\r\nEND:VEVENT\r\n").join("")+"END:VCALENDAR";
  const u=URL.createObjectURL(new Blob([ics],{type:"text/calendar"})),l=document.createElement("a");l.href=u;l.download="approved-requests.ics";l.click();URL.revokeObjectURL(u)}
-route();load();setInterval(()=>{if(!document.hidden)load()},60000);
+resetComm();route();load();setInterval(()=>{if(!document.hidden)load()},60000);
 </script></body></html>
