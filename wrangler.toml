@@ -1,4 +1,4 @@
-name = "faculty-calendar"
+name = "ctde"
 main = "src/worker.js"
 compatibility_date = "2025-01-01"
 
