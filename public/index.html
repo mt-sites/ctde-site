@@ -41,6 +41,7 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 .adm{display:grid;grid-template-columns:180px minmax(0,1fr);gap:14px;align-items:start}.admc{display:grid;gap:14px;min-width:0}
 nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;position:sticky;top:10px}nav.side button{text-align:left;width:100%}
 @media(max-width:700px){.adm{grid-template-columns:1fr}nav.side{flex-direction:row;position:static}nav.side button{flex:1;text-align:center;padding:8px 4px;font-size:13px}}
+.mrow td{background:var(--bg);font-weight:700;cursor:pointer}
 .hide{display:none}
 </style></head><body>
 <header><div><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>Requests, approvals and schedule preview</p></div><button id="hb" class="hbtn" onclick="go(location.hash==='#admin'?'viewer':'admin')">Admin</button></header>
@@ -65,7 +66,7 @@ nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);borde
  <div class="card" id="mgrCard"><h2>Types &amp; names</h2><div class="grid2">
   <div><label>Add type of request (color is assigned automatically)</label><div style="display:flex;gap:6px"><input id="nType" placeholder="e.g. Maternity Leave" onkeydown="if(event.key==='Enter')addType($('nType').value)"><button class="btn" onclick="addType($('nType').value)">Add</button></div><div class="mgr" id="tList"></div></div>
   <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="nlist" id="nList"></div></div></div><p class="note" id="msg2"></p></div>
- <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+ <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><input id="rQ" placeholder="🔍 Search name — looks through every month of the year" oninput="render()" style="margin-bottom:6px"><div id="rCount" class="note" style="margin:0 0 8px"></div><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
   <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
 </div></div>
@@ -118,11 +119,19 @@ function cal(el,y,m,list,nav){
  el.innerHTML=h}
 function shift(n){aM+=n;if(aM<0){aM=11;aY--}if(aM>11){aM=0;aY++}render()}
 function inMonth(r,y,m){const a=y+"-"+String(m+1).padStart(2,"0");return r.start.slice(0,7)<=a&&a<=r.end.slice(0,7)}
+const closed=new Set();
+function togM(k){closed.has(k)?closed.delete(k):closed.add(k);render()}
+function rrow(r,ok){return `<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`}
 function render(){
  if(location.hash==="#admin"){
   const ok=!!pw;$("gate").classList.toggle("hide",ok);const L=curTab==="lists";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",!L);$("tLists").classList.toggle("on",L);$("formCard").classList.toggle("hide",!ok||L);$("resCard").classList.toggle("hide",!ok||L);$("prevCard").classList.toggle("hide",!ok||L);$("mgrCard").classList.toggle("hide",!ok||!L);fillSelects();
-  const sorted=[...reqs].sort((a,b)=>b.start.localeCompare(a.start));
-  $("rows").innerHTML=sorted.map(r=>`<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests yet.</td></tr>`;
+  const q=($("rQ").value||"").trim().toLowerCase(),found=reqs.filter(r=>!q||r.name.toLowerCase().includes(q)).sort((a,b)=>a.start.localeCompare(b.start)),gr={};
+  found.forEach(r=>(gr[r.start.slice(0,7)]=gr[r.start.slice(0,7)]||[]).push(r));
+  let h="";Object.keys(gr).sort().forEach(k=>{const[y,m]=k.split("-"),shut=!q&&closed.has(k);
+   h+=`<tr class="mrow" onclick="togM('${k}')"><td colspan="6">${shut?"▸":"▾"} ${MN[m-1]} ${y} <span style="font-weight:400;color:var(--mut)">· ${gr[k].length} request${gr[k].length>1?"s":""}</span></td></tr>`;
+   if(!shut)h+=gr[k].map(r=>rrow(r,ok)).join("")});
+  $("rows").innerHTML=h||`<tr><td colspan="6" class="note">${q?"No requests found for that name.":"No requests yet."}</td></tr>`;
+  $("rCount").textContent=q?found.length+" result"+(found.length===1?"":"s")+" for “"+$("rQ").value.trim()+"” across all months":"";
   cal($("calA"),aY,aM,reqs,true)}
  else{
   const q=$("vS").value.trim().toLowerCase();
