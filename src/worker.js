@@ -22,18 +22,80 @@ async function same(a, b) { // constant-time comparison of SHA-256 digests
   return d === 0;
 }
 
+// ---------------------------------------------------------------------------------------------
+// Backup to Google Drive + automatic archive-and-clear
+// ---------------------------------------------------------------------------------------------
+// Automatic backup + clear happens ONLY when the stored data reaches this size (default 20 MB; override with the MAX_BYTES variable).
+// If it is not reached, nothing is backed up automatically. (Cloudflare KV cannot hold more than 25 MB in one key.)
+const DEFAULT_MAX_BYTES = 20 * 1024 ** 2;
+// Optional time-based clean-up, OFF by default. Set the variable CLEAR_EVERY_MONTHS (e.g. 6) to also clean up on a schedule.
+const phToday = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
+const addMonths = (d, n) => { const x = new Date(d); x.setUTCMonth(x.getUTCMonth() + n); return x; };
+const readJSON = async (env, k, dflt) => JSON.parse((await env.REQUESTS.get(k)) || "null") ?? dflt;
+const getMeta = (env) => readJSON(env, "meta", null);
+const putMeta = (env, m) => env.REQUESTS.put("meta", JSON.stringify(m));
+
+async function sizes(env) {
+  const enc = new TextEncoder(), n = async (k) => enc.encode((await env.REQUESTS.get(k)) || "").length;
+  const [list, comms, config] = await Promise.all([n("list"), n("comms"), n("config")]);
+  return { list, comms, config, total: list + comms + config };
+}
+
 // Sends a full copy of the data to the Google Apps Script web app, which saves a dated .xlsx in Google Drive.
-async function backup(env) {
+async function backup(env, snap) {
   if (!env.BACKUP_URL || !env.BACKUP_TOKEN) return { ok: false, error: "BACKUP_URL / BACKUP_TOKEN secrets are not set" };
-  const get = async (k) => JSON.parse((await env.REQUESTS.get(k)) || "null");
   const payload = { token: env.BACKUP_TOKEN, at: new Date().toISOString(),
-    requests: (await get("list")) || [], comms: (await get("comms")) || [],
-    config: (await get("config")) || { types: [...BASE_TYPES, ...NEW_TYPES], names: [] } };
+    requests: snap ? snap.requests : await readJSON(env, "list", []),
+    comms: snap ? snap.comms : await readJSON(env, "comms", []),
+    config: (await readJSON(env, "config", null)) || { types: [...BASE_TYPES, ...NEW_TYPES], names: [] } };
+  let res;
   try {
     const r = await fetch(env.BACKUP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload), redirect: "follow" });
     const t = await r.text();
-    try { return JSON.parse(t); } catch { return { ok: false, error: "Unexpected reply from Google Apps Script (check the Web app is deployed for Anyone)", status: r.status }; }
-  } catch (e) { return { ok: false, error: String(e) }; }
+    try { res = JSON.parse(t); } catch { res = { ok: false, error: "Unexpected reply from Google Apps Script (check the Web app is deployed for Anyone)", status: r.status }; }
+  } catch (e) { res = { ok: false, error: String(e) }; }
+  const meta = (await getMeta(env)) || { since: new Date().toISOString() };
+  if (res.ok) { meta.lastBackupAt = new Date().toISOString(); meta.lastFile = res.file; delete meta.lastError; }
+  else meta.lastError = { at: new Date().toISOString(), error: res.error };
+  await putMeta(env, meta);
+  return res;
+}
+
+// Back up to Drive FIRST. Only if that succeeded, remove the archived records from KV (Drive files are never deleted).
+// Kept in the system: types/names lists, and leave/travel requests that have not ended yet.
+async function archiveAndClear(env, reason, nowMs) {
+  const snap = { requests: await readJSON(env, "list", []), comms: await readJSON(env, "comms", []) };
+  const res = await backup(env, snap);
+  if (!res.ok || !res.file) return { action: "failed", reason, error: res.error || "backup did not return a file" }; // nothing is cleared
+  const today = phToday(nowMs), rid = new Set(snap.requests.map((r) => r.id)), cid = new Set(snap.comms.map((c) => c.id));
+  const curR = await readJSON(env, "list", []), curC = await readJSON(env, "comms", []);
+  const newR = curR.filter((r) => !rid.has(r.id) || r.end >= today); // records added during the backup, or still upcoming, stay
+  const newC = curC.filter((c) => !cid.has(c.id));
+  await env.REQUESTS.put("list", JSON.stringify(newR));
+  await env.REQUESTS.put("comms", JSON.stringify(newC));
+  const meta = (await getMeta(env)) || {};
+  meta.lastClearAt = new Date(nowMs).toISOString();
+  meta.lastClear = { reason, file: res.file, requests: curR.length - newR.length, comms: curC.length - newC.length, kept: newR.length };
+  await putMeta(env, meta);
+  return { action: "cleared", ...meta.lastClear };
+}
+
+async function maintain(env, nowMs = Date.now()) {
+  const sz = await sizes(env), max = Number(env.MAX_BYTES) || DEFAULT_MAX_BYTES, months = Number(env.CLEAR_EVERY_MONTHS) || 0;
+  let meta = (await getMeta(env)) || {};
+  if (months > 0 && !meta.lastClearAt && !meta.since) { meta.since = new Date(nowMs).toISOString(); await putMeta(env, meta); }
+  const big = sz.total >= max;
+  const due = months > 0 && addMonths(meta.lastClearAt || meta.since, months).getTime() <= nowMs;
+  if (!big && !due) return { action: "none" };
+  return archiveAndClear(env, big ? "size limit reached" : months + " months passed", nowMs);
+}
+
+async function status(env, nowMs = Date.now()) {
+  const meta = (await getMeta(env)) || {}, sz = await sizes(env), months = Number(env.CLEAR_EVERY_MONTHS) || 0;
+  return { configured: !!(env.BACKUP_URL && env.BACKUP_TOKEN), lastBackupAt: meta.lastBackupAt || null, lastFile: meta.lastFile || null,
+    lastClearAt: meta.lastClearAt || null, lastClear: meta.lastClear || null, lastError: meta.lastError || null, sizes: sz,
+    maxBytes: Number(env.MAX_BYTES) || DEFAULT_MAX_BYTES,
+    nextClear: months > 0 ? addMonths(meta.lastClearAt || meta.since || new Date(nowMs).toISOString(), months).toISOString() : null };
 }
 
 export default {
@@ -64,6 +126,7 @@ export default {
 
     if (p === "/api/login" && m === "POST") return json({ ok: true });
     if (p === "/api/backup" && m === "POST") return json(await backup(env));
+    if (p === "/api/backup" && m === "GET") return json(await status(env));
 
     // ---- Incoming communications (admin only) ----
     const cleanComm = (b) => {
@@ -158,5 +221,6 @@ export default {
     }
     return json({ error: "not found" }, 404);
   },
-  async scheduled(event, env, ctx) { ctx.waitUntil(backup(env)); }, // daily backup (see wrangler.toml)
+  // Runs daily (see wrangler.toml). It only CHECKS the data size: backup + clear happen when the limit is reached, otherwise nothing is done.
+  async scheduled(event, env, ctx) { ctx.waitUntil(maintain(env)); },
 };
