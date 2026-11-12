@@ -66,9 +66,9 @@ nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);borde
  <div class="card" id="mgrCard"><h2>Types &amp; names</h2><div class="grid2">
   <div><label>Add type of request (color is assigned automatically)</label><div style="display:flex;gap:6px"><input id="nType" placeholder="e.g. Maternity Leave" onkeydown="if(event.key==='Enter')addType($('nType').value)"><button class="btn" onclick="addType($('nType').value)">Add</button></div><div class="mgr" id="tList"></div></div>
   <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="nlist" id="nList"></div></div></div><p class="note" id="msg2"></p></div>
- <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><input id="rQ" placeholder="🔍 Search name — looks through every month of the year" oninput="render()" style="margin-bottom:6px"><div id="rCount" class="note" style="margin:0 0 8px"></div><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
-  <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
+ <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><input id="rQ" placeholder="🔍 Search name across all months (blank = month shown in the calendar)" oninput="render()" style="margin-bottom:6px"><div id="rCount" class="note" style="margin:0 0 8px"></div><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <p class="note"><button class="sm" onclick="dl()">Download approved requests (.ics)</button> In Google Calendar: Settings → Import &amp; export → Import the .ics file. “Add to GCal” on each row opens a pre-filled event.</p></div>
 </div></div>
 </section>
 <section id="viewer" class="hide">
@@ -125,13 +125,13 @@ function rrow(r,ok){return `<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lb
 function render(){
  if(location.hash==="#admin"){
   const ok=!!pw;$("gate").classList.toggle("hide",ok);const L=curTab==="lists";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",!L);$("tLists").classList.toggle("on",L);$("formCard").classList.toggle("hide",!ok||L);$("resCard").classList.toggle("hide",!ok||L);$("prevCard").classList.toggle("hide",!ok||L);$("mgrCard").classList.toggle("hide",!ok||!L);fillSelects();
-  const q=($("rQ").value||"").trim().toLowerCase(),found=reqs.filter(r=>!q||r.name.toLowerCase().includes(q)).sort((a,b)=>a.start.localeCompare(b.start)),gr={};
-  found.forEach(r=>(gr[r.start.slice(0,7)]=gr[r.start.slice(0,7)]||[]).push(r));
+  const q=($("rQ").value||"").trim().toLowerCase(),found=reqs.filter(r=>q?r.name.toLowerCase().includes(q):inMonth(r,aY,aM)).sort((a,b)=>a.start.localeCompare(b.start)),gr={};
+  const gk=r=>q?r.start.slice(0,7):aY+"-"+String(aM+1).padStart(2,"0");found.forEach(r=>(gr[gk(r)]=gr[gk(r)]||[]).push(r));
   let h="";Object.keys(gr).sort().forEach(k=>{const[y,m]=k.split("-"),shut=!q&&closed.has(k);
    h+=`<tr class="mrow" onclick="togM('${k}')"><td colspan="6">${shut?"▸":"▾"} ${MN[m-1]} ${y} <span style="font-weight:400;color:var(--mut)">· ${gr[k].length} request${gr[k].length>1?"s":""}</span></td></tr>`;
    if(!shut)h+=gr[k].map(r=>rrow(r,ok)).join("")});
-  $("rows").innerHTML=h||`<tr><td colspan="6" class="note">${q?"No requests found for that name.":"No requests yet."}</td></tr>`;
-  $("rCount").textContent=q?found.length+" result"+(found.length===1?"":"s")+" for “"+$("rQ").value.trim()+"” across all months":"";
+  $("rows").innerHTML=h||`<tr><td colspan="6" class="note">${q?"No requests found for that name.":"No requests in "+MN[aM]+" "+aY+"."}</td></tr>`;
+  $("rCount").textContent=q?found.length+" result"+(found.length===1?"":"s")+" for “"+$("rQ").value.trim()+"” across all months":"Showing "+MN[aM]+" "+aY+" from the calendar · type a name to search all months";
   cal($("calA"),aY,aM,reqs,true)}
  else{
   const q=$("vS").value.trim().toLowerCase();
