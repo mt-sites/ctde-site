@@ -1,6 +1,8 @@
 // Cloudflare Worker: API for the Faculty Leave & Travel Calendar.
 // Secret:  ADMIN_PASSWORD   (Settings -> Variables and Secrets -> type "Secret")
 // Binding: REQUESTS         (a KV namespace)
+const DOC = { "Communication": ["Internal", "External"], "MEMO": ["Administrative", "Institutional", "VPAA", "Others"],
+  "T.O.": ["Office of the President", "VPAA"], "Endorsement": null, "Others": null };
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const BASE_TYPES = [
   { name: "Sick Leave", color: "#d64545" }, { name: "Wellness Leave", color: "#2e9e6b" }, { name: "Travel Order", color: "#1f5fbf" },
@@ -34,6 +36,8 @@ export default {
       }
       return c;
     };
+    const listC = async () => JSON.parse((await env.REQUESTS.get("comms")) || "[]");
+    const saveC = (l) => env.REQUESTS.put("comms", JSON.stringify(l));
     const save = (l) => env.REQUESTS.put("list", JSON.stringify(l));
 
     if (p === "/api/requests" && m === "GET") return json(await list());
@@ -45,6 +49,35 @@ export default {
     if (!ok) { await new Promise((r) => setTimeout(r, 800)); return json({ error: "unauthorized" }, 401); }
 
     if (p === "/api/login" && m === "POST") return json({ ok: true });
+
+    // ---- Incoming communications (admin only) ----
+    const cleanComm = (b) => {
+      const t = b.type in DOC ? b.type : null; if (!t) return null;
+      const subs = DOC[t], sub = subs ? clip(b.sub, 40) : "";
+      if (subs && !subs.includes(sub)) return null;
+      const c = { received: b.received, type: t, sub, other: t === "Others" ? clip(b.other, 100) : "",
+        subject: clip(b.subject, 300), from: clip(b.from, 150), action: clip(b.action, 500) };
+      if (!DATE.test(c.received) || !c.subject || !c.from || (t === "Others" && !c.other)) return null;
+      return c;
+    };
+    if (p === "/api/comms" && m === "GET") return json(await listC());
+    if (p === "/api/comms" && m === "POST") {
+      let b; try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+      const c = cleanComm(b); if (!c) return json({ error: "invalid input" }, 400);
+      const l = await listC(); l.push({ id: crypto.randomUUID(), ...c }); await saveC(l); return json(l);
+    }
+    const cm = p.match(/^\/api\/comms\/([\w-]+)$/);
+    if (cm) {
+      const l = await listC(), i = l.findIndex((x) => x.id === cm[1]);
+      if (i < 0) return json({ error: "not found" }, 404);
+      if (m === "DELETE") l.splice(i, 1);
+      else if (m === "PATCH") {
+        let b; try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+        const c = cleanComm(b); if (!c) return json({ error: "invalid input" }, 400);
+        l[i] = { id: l[i].id, ...c };
+      } else return json({ error: "method not allowed" }, 405);
+      await saveC(l); return json(l);
+    }
 
     if (p === "/api/config" && m === "PUT") {
       let b; try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
