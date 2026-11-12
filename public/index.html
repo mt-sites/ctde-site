@@ -105,7 +105,7 @@ header{flex-wrap:wrap}header>div:first-child{min-width:0}
   <div style="margin-top:10px"><label>Action needed / Remarks</label><textarea id="mAction" rows="2" maxlength="500"></textarea></div>
   <p style="margin:12px 0 0"><button class="btn" id="mBtn" onclick="saveComm()">Submit</button> <button class="sm hide" id="mCancel" onclick="resetComm()">Cancel edit</button> <span id="mMsg" class="note"></span></p>
  </div>
- <div class="card" style="margin-top:14px"><h2>Incoming communications</h2><input id="mQ" placeholder="🔍 Search any field: date, type, subject, from, action…" oninput="renderComms()" style="margin-bottom:6px"><div id="mCount" class="note" style="margin:0 0 8px"></div>
+ <div class="card" style="margin-top:14px"><h2>Incoming communications <span style="float:right"><button class="sm" onclick="xlComms()">⬇ Download Excel</button></span></h2><input id="mQ" placeholder="🔍 Search any field: date, type, subject, from, action…" oninput="renderComms()" style="margin-bottom:6px"><div id="mCount" class="note" style="margin:0 0 8px"></div>
   <div class="scroll"><table><thead><tr><th>Date received</th><th>Type of document</th><th>Subject</th><th>From</th><th>Action needed / Remarks</th><th>Actions</th></tr></thead><tbody id="mRows"></tbody></table></div></div>
 </div>
 </div></div>
@@ -190,7 +190,7 @@ let curTab="req";
 function atab(t){curTab=t;render();if(t==="comms")loadComms()}
 const DOC={"Communication":["Internal","External"],"MEMO":["Administrative","Institutional","VPAA","Others"],"T.O.":["Office of the President","VPAA"],"Endorsement":null,"Others":null};
 const SUBL={"Communication":"Internal / External","MEMO":"Memo category","T.O.":"Issued by"};
-let comms=[],mEdit=null;
+let comms=[],shown=[],mEdit=null;
 const dlabel=c=>c.type+(c.sub?" – "+c.sub:"")+(c.other?" – "+c.other:"");
 $("mType").innerHTML='<option value="">— Select type —</option>'+Object.keys(DOC).map(t=>`<option>${esc(t)}</option>`).join("");
 $("mType").onchange=()=>mTypeChange();
@@ -202,6 +202,7 @@ function renderComms(){
  const q=$("mQ").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
  const hay=c=>[c.received,fmt(c.received),dlabel(c),c.type,c.sub,c.other,c.subject,c.from,c.action].join(" ").toLowerCase();
  const l=comms.filter(c=>q.every(t=>hay(c).includes(t))).sort((a,b)=>b.received.localeCompare(a.received));
+ shown=l;
  $("mRows").innerHTML=l.map(c=>`<tr><td>${fmt(c.received)}</td><td>${esc(dlabel(c))}</td><td>${esc(c.subject)}</td><td>${esc(c.from)}</td><td>${esc(c.action)}</td><td><button class="sm" onclick="editComm('${c.id}')">Edit</button><button class="sm" onclick="delComm('${c.id}')">Delete</button></td></tr>`).join("")||`<tr><td colspan="6" class="note">${q.length?"No communications match your search.":"No communications recorded yet."}</td></tr>`;
  $("mCount").textContent=q.length?l.length+" of "+comms.length+" match":comms.length+" record"+(comms.length===1?"":"s")}
 function resetComm(){mEdit=null;["mType","mOther","mFrom","mSubject","mAction"].forEach(i=>$(i).value="");$("mDate").value=iso(new Date());mTypeChange();$("mT").textContent="Incoming communication";$("mBtn").textContent="Submit";$("mCancel").classList.add("hide");$("mMsg").textContent=""}
@@ -285,6 +286,26 @@ function fillSheet(sheet,styles,table,list){
  return{sheet:sheet.replace('<dimension ref="B1:H8"/>',`<dimension ref="B1:H${last}"/>`).replace("</sheetData>",rows+"</sheetData>"),
   styles:styles.replace("<fonts",'<numFmts count="1"><numFmt numFmtId="164" formatCode="mmm d, yyyy"/></numFmts><fonts').replace('<cellXfs count="4">','<cellXfs count="7">').replace("</cellXfs>",XFS+"</cellXfs>"),
   table:table.replace(/B8:H9/g,"B8:H"+last)}}
+function fillComms(sheet,styles,table,list){
+ const tx=(c,v,st)=>v?`<c r="${c}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${XML(v)}</t></is></c>`:`<c r="${c}" s="${st}"/>`;
+ const dt=(c,v)=>{const n=serial(v);return n==null?`<c r="${c}" s="5"/>`:`<c r="${c}" s="5"><v>${n}</v></c>`};
+ let rows="";
+ list.forEach((r,i)=>{const n=9+i;rows+=`<row r="${n}" spans="2:6">`+dt("B"+n,r.received)+tx("C"+n,dlabel(r),6)+tx("D"+n,r.subject,6)+tx("E"+n,r.from,6)+tx("F"+n,r.action,6)+"</row>"});
+ const last=8+list.length;
+ return{sheet:sheet.replace('<dimension ref="B1:F8"/>',`<dimension ref="B1:F${last}"/>`).replace("</sheetData>",rows+"</sheetData>"),
+  styles:styles.replace("<fonts",'<numFmts count="1"><numFmt numFmtId="164" formatCode="mmm d, yyyy"/></numFmts><fonts').replace('<cellXfs count="4">','<cellXfs count="7">').replace("</cellXfs>",XFS+"</cellXfs>"),
+  table:table.replace(/B8:F9/g,"B8:F"+last)}}
+async function xlComms(){
+ if(!shown.length){alert("No communications to export yet.");return}
+ try{
+  await loadJSZip();
+  const res=await fetch("/Communications_template.xlsx");if(!res.ok)throw new Error("template");
+  const z=await JSZip.loadAsync(await res.arrayBuffer()),rd=p=>z.file(p).async("string");
+  const o=fillComms(await rd("xl/worksheets/sheet1.xml"),await rd("xl/styles.xml"),await rd("xl/tables/table1.xml"),[...shown].sort((a,b)=>a.received.localeCompare(b.received)));
+  z.file("xl/worksheets/sheet1.xml",o.sheet);z.file("xl/styles.xml",o.styles);z.file("xl/tables/table1.xml",o.table);
+  const blob=await z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",compression:"DEFLATE"});
+  const u=URL.createObjectURL(blob),l=document.createElement("a");l.href=u;l.download="Incoming_Communications_"+iso(new Date())+".xlsx";l.click();setTimeout(()=>URL.revokeObjectURL(u),2000)
+ }catch(e){alert("Could not create the Excel file. Make sure Communications_template.xlsx is deployed in the public folder and you are online.")}}
 function loadJSZip(){return window.JSZip?Promise.resolve():new Promise((ok,no)=>{const e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
 async function xl(){
  if(!reqs.length){alert("No requests to export yet.");return}
