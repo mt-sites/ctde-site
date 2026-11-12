@@ -2,7 +2,8 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Faculty Leave &amp; Travel Calendar</title>
+<title>CTDE Dashboard</title>
+<link rel="icon" href="/ctde-logo.png">
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--ink:#1c2233;--mut:#667;--line:#dde1ec;--acc:#1f5fbf;
 --c1:#d64545;--c2:#2e9e6b;--c3:#1f5fbf;--c4:#8a52c9;--c5:#d98a1c;--c6:#0e9aa7;--c7:#777;
@@ -13,7 +14,7 @@ header{background:var(--acc);color:#fff;padding:14px 16px;display:flex;align-ite
 nav{display:flex;gap:6px;padding:10px 16px 0;max-width:1100px;margin:auto}
 nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
 nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-main{max-width:1500px;margin:auto;padding:12px 16px 40px;display:grid;gap:14px}
+main{grid-template-columns:minmax(0,1fr);max-width:1500px;margin:auto;padding:12px 16px 40px;display:grid;gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
 .card h2{margin:0 0 10px;font-size:16px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
@@ -42,13 +43,31 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:
 nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;position:sticky;top:10px}nav.side button{text-align:left;width:100%}
 @media(max-width:700px){.adm{grid-template-columns:1fr}nav.side{flex-direction:row;position:static}nav.side button{flex:1;text-align:center;padding:8px 4px;font-size:13px}}
 .mrow td{background:var(--bg);font-weight:700;cursor:pointer}
-.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.split table{min-width:540px}#viewer{max-width:1100px;width:100%;justify-self:center}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.split table{min-width:540px}#secViewer{max-width:1100px;width:100%;justify-self:center}
 @media(max-width:1000px){.split{grid-template-columns:1fr}}
+header{flex-wrap:wrap}header>div:first-child{min-width:0}
+.hlogo{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#fff;flex:none}
+#secHome{padding:26px 0 10px}.hero{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.hero img{width:170px;height:170px;object-fit:cover;border-radius:50%;background:#fff;box-shadow:0 6px 22px rgba(27,42,107,.25)}
+.hero h1{margin:10px 0 0;font-size:26px;line-height:1.25;color:#1b2a6b;max-width:720px}.hero p{margin:0;color:var(--mut);font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;max-width:860px;margin:28px auto 0}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 16px;cursor:pointer;text-align:center;font:inherit;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.05);transition:transform .15s,box-shadow .15s,border-color .15s}
+.tile:hover{transform:translateY(-3px);border-color:#b8905a;box-shadow:0 10px 24px rgba(27,42,107,.18)}
+.tile .ic{font-size:36px}.tile b{display:block;font-size:17px;margin-top:6px;color:#1b2a6b}.tile span{display:block;font-size:12.5px;color:var(--mut);margin-top:5px}
+@media(max-width:600px){.hero h1{font-size:21px}.hero img{width:130px;height:130px}}
 .hide{display:none}
 </style></head><body>
-<header><div><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>Requests, approvals and schedule preview</p></div><button id="hb" class="hbtn" onclick="go(location.hash==='#admin'?'viewer':'admin')">Admin</button></header>
+<header id="hdr" class="hide"><div style="display:flex;align-items:center;gap:10px"><img class="hlogo" src="/ctde-logo.png" alt="CTDE"><div><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>College of Technological and Developmental Education</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="hbtn" onclick="go('home')">🏠 Home</button><button id="hb" class="hbtn" onclick="toggleView()">Admin</button></div></header>
 <main>
-<section id="admin" class="hide">
+<section id="secHome">
+ <div class="hero"><img src="/ctde-logo.png" alt="CTDE seal"><h1>College of Technological and Developmental Education</h1><p>Camarines Sur Polytechnic Colleges · Nabua, Camarines Sur</p></div>
+ <div class="tiles">
+  <button class="tile" onclick="go('viewer')"><div class="ic">📅</div><b>Faculty Calendar</b><span>View leave and travel schedules by month</span></button>
+  <button class="tile" onclick="go('admin')"><div class="ic">🛠️</div><b>Admin</b><span>Manage requests, types and names · password required</span></button>
+  <button class="tile" onclick="go('comms')"><div class="ic">📨</div><b>Communications</b><span>Incoming documents log · password required</span></button>
+ </div>
+</section>
+<section id="secAdmin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
  <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button id="tComm" onclick="atab('comms')">📨 Incoming Communications</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
 <div class="admc">
@@ -91,7 +110,7 @@ nav.side{flex-direction:column;margin:0;padding:8px;background:var(--card);borde
 </div>
 </div></div>
 </section>
-<section id="viewer" class="hide">
+<section id="secViewer" class="hide">
  <div class="card"><div class="grid2">
   <div><label>Month</label><select id="vM"></select></div>
   <div><label>Year</label><input type="number" id="vY" min="2000" max="2100"></div>
@@ -122,7 +141,12 @@ $("fType").onchange=()=>{if($("fType").value==="__add__"){addType(prompt("New ty
 $("fName").onchange=()=>{if($("fName").value==="__add__")addName(prompt("New faculty / employee name:"))};
 $("vM").onchange=()=>{vm=+$("vM").value;render()};$("vY").oninput=()=>{const y=+$("vY").value;if(y>1999&&y<2101){vy=y;render()}};$("vS").oninput=render;
 function go(v){location.hash=v}
-function route(){const v=location.hash==="#admin"?"admin":"viewer";$("admin").classList.toggle("hide",v!=="admin");$("viewer").classList.toggle("hide",v!=="viewer");$("hb").textContent=v==="admin"?"← Faculty View":"Admin";render()}
+let curView="home";
+function route(){const h=location.hash,v=h==="#admin"||h==="#comms"?"admin":h==="#viewer"?"viewer":"home";curView=v;
+ if(v==="admin")curTab=h==="#comms"?"comms":"req";
+ $("secHome").classList.toggle("hide",v!=="home");$("secAdmin").classList.toggle("hide",v!=="admin");$("secViewer").classList.toggle("hide",v!=="viewer");$("hdr").classList.toggle("hide",v==="home");
+ $("hb").textContent=v==="admin"?"← Faculty View":"Admin";render();if(v==="admin"&&curTab==="comms"&&pw)loadComms()}
+function toggleView(){go(curView==="admin"?"viewer":"admin")}
 addEventListener("hashchange",route);
 async function api(path,opt={}){
  const r=await fetch("/api/"+path,{...opt,headers:{"Content-Type":"application/json",...(pw?{"X-Admin-Password":pw}:{})}});
@@ -143,7 +167,7 @@ const closed=new Set();
 function togM(k){closed.has(k)?closed.delete(k):closed.add(k);render()}
 function rrow(r,ok){return `<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`}
 function render(){
- if(location.hash==="#admin"){
+ if(curView==="admin"){
   const ok=!!pw;$("gate").classList.toggle("hide",ok);const T=curTab,R=T==="req";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",R);$("tLists").classList.toggle("on",T==="lists");$("tComm").classList.toggle("on",T==="comms");$("formCard").classList.toggle("hide",!ok||!R);$("splitWrap").classList.toggle("hide",!ok||!R);$("mgrCard").classList.toggle("hide",!ok||T!=="lists");$("commsWrap").classList.toggle("hide",!ok||T!=="comms");renderComms();fillSelects();
   const q=($("rQ").value||"").trim().toLowerCase(),found=reqs.filter(r=>q?r.name.toLowerCase().includes(q):inMonth(r,aY,aM)).sort((a,b)=>a.start.localeCompare(b.start)),gr={};
   const gk=r=>q?r.start.slice(0,7):aY+"-"+String(aM+1).padStart(2,"0");found.forEach(r=>(gr[gk(r)]=gr[gk(r)]||[]).push(r));
@@ -160,7 +184,7 @@ function render(){
   $("vRows").innerHTML=l.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${esc(allRem(r))}</td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests found for this month.</td></tr>`}}
 async function gateGo(){
  const p=$("gP").value;if(!p)return;
- try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render()}
+ try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render();if(curTab==="comms")loadComms()}
  catch(e){$("gM").textContent="Wrong password."}}
 let curTab="req";
 function atab(t){curTab=t;render();if(t==="comms")loadComms()}
