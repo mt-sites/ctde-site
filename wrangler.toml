@@ -11,4 +11,4 @@ binding = "REQUESTS"
 id = "069bf6e2b3c14191872c18eacd9fe79c"
 
 [triggers]
-crons = ["0 16 * * *"]   # daily backup at midnight Philippine time (16:00 UTC)
+crons = ["0 16 * * *"]   # daily CHECK at midnight Philippine time (16:00 UTC); a backup only happens when the data size limit is reached
