@@ -69,7 +69,7 @@ header{flex-wrap:wrap}header>div:first-child{min-width:0}
 </section>
 <section id="secAdmin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
- <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
+ <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button id="bBtn" onclick="backupNow()">☁️ Backup to Drive</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
 <div class="admc">
  <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
@@ -221,6 +221,10 @@ async function saveComm(){
  const body=JSON.stringify({received:$("mDate").value,type:t,sub:subs?$("mSub").value:"",other:t==="Others"?$("mOther").value.trim():"",subject:$("mSubject").value.trim(),from:$("mFrom").value.trim(),action:$("mAction").value.trim()});
  try{const was=!!mEdit;comms=await api(was?"comms/"+mEdit:"comms",{method:was?"PATCH":"POST",body});resetComm();$("mMsg").textContent=was?"Updated.":"Saved.";renderComms()}catch(e){commFail(e)}}
 async function delComm(id){if(!confirm("Delete this record?"))return;try{comms=await api("comms/"+id,{method:"DELETE"});if(mEdit===id)resetComm();renderComms()}catch(e){commFail(e)}}
+async function backupNow(){const b=$("bBtn"),old=b.textContent;b.disabled=true;b.textContent="⏳ Backing up…";
+ try{const r=await api("backup",{method:"POST"});alert(r.ok?"Backup saved to Google Drive:\n"+r.file:"Backup failed: "+(r.error||"unknown error"))}
+ catch(e){if(e.status===401){pw=null;render()}else alert("Backup failed (error "+(e.status||"network")+").")}
+ b.disabled=false;b.textContent=old}
 function lockAdmin(){pw=null;curTab="req";comms=[];resetForm();resetComm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent=$("msg2").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
 function ensureOpt(sel,v){if(v&&![...sel.options].some(o=>o.value===v))sel.insertAdjacentHTML("afterbegin",`<option>${esc(v)}</option>`)}
