@@ -69,7 +69,7 @@ header{flex-wrap:wrap}header>div:first-child{min-width:0}
 </section>
 <section id="secAdmin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
- <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button id="tComm" onclick="atab('comms')">📨 Incoming Communications</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
+ <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
 <div class="admc">
  <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
@@ -141,11 +141,11 @@ $("fType").onchange=()=>{if($("fType").value==="__add__"){addType(prompt("New ty
 $("fName").onchange=()=>{if($("fName").value==="__add__")addName(prompt("New faculty / employee name:"))};
 $("vM").onchange=()=>{vm=+$("vM").value;render()};$("vY").oninput=()=>{const y=+$("vY").value;if(y>1999&&y<2101){vy=y;render()}};$("vS").oninput=render;
 function go(v){location.hash=v}
-let curView="home";
+let curView="home",commsMode=false;
 function route(){const h=location.hash,v=h==="#admin"||h==="#comms"?"admin":h==="#viewer"?"viewer":"home";curView=v;
  if(v==="admin")curTab=h==="#comms"?"comms":"req";
  $("secHome").classList.toggle("hide",v!=="home");$("secAdmin").classList.toggle("hide",v!=="admin");$("secViewer").classList.toggle("hide",v!=="viewer");$("hdr").classList.toggle("hide",v==="home");
- $("hb").textContent=v==="admin"?"← Faculty View":"Admin";render();if(v==="admin"&&curTab==="comms"&&pw)loadComms()}
+ commsMode=h==="#comms";$("hb").classList.toggle("hide",v!=="admin");$("hb").textContent="← Faculty View";render();if(v==="admin"&&curTab==="comms"&&pw)loadComms()}
 function toggleView(){go(curView==="admin"?"viewer":"admin")}
 addEventListener("hashchange",route);
 async function api(path,opt={}){
@@ -168,7 +168,7 @@ function togM(k){closed.has(k)?closed.delete(k):closed.add(k);render()}
 function rrow(r,ok){return `<tr><td>${esc(r.name)}${details(r)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${ok?`<button class="sm" onclick="editReq('${r.id}')">Edit</button><button class="sm" onclick="del('${r.id}')">Delete</button>`:""}<a class="sm" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${gcal(r)}">Add to GCal</a></td></tr>`}
 function render(){
  if(curView==="admin"){
-  const ok=!!pw;$("gate").classList.toggle("hide",ok);const T=curTab,R=T==="req";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",R);$("tLists").classList.toggle("on",T==="lists");$("tComm").classList.toggle("on",T==="comms");$("formCard").classList.toggle("hide",!ok||!R);$("splitWrap").classList.toggle("hide",!ok||!R);$("mgrCard").classList.toggle("hide",!ok||T!=="lists");$("commsWrap").classList.toggle("hide",!ok||T!=="comms");renderComms();fillSelects();
+  const ok=!!pw;$("gate").classList.toggle("hide",ok);const T=curTab,R=T==="req";$("admWrap").classList.toggle("hide",!ok);$("tReq").classList.toggle("on",R);$("tLists").classList.toggle("on",T==="lists");$("tReq").classList.toggle("hide",commsMode);$("tLists").classList.toggle("hide",commsMode);$("formCard").classList.toggle("hide",!ok||!R);$("splitWrap").classList.toggle("hide",!ok||!R);$("mgrCard").classList.toggle("hide",!ok||T!=="lists");$("commsWrap").classList.toggle("hide",!ok||T!=="comms");renderComms();fillSelects();
   const q=($("rQ").value||"").trim().toLowerCase(),found=reqs.filter(r=>q?r.name.toLowerCase().includes(q):inMonth(r,aY,aM)).sort((a,b)=>a.start.localeCompare(b.start)),gr={};
   const gk=r=>q?r.start.slice(0,7):aY+"-"+String(aM+1).padStart(2,"0");found.forEach(r=>(gr[gk(r)]=gr[gk(r)]||[]).push(r));
   let h="";Object.keys(gr).sort().forEach(k=>{const[y,m]=k.split("-"),shut=!q&&closed.has(k);
