@@ -4,6 +4,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CTDE Dashboard</title>
 <link rel="icon" href="/ctde-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--ink:#1c2233;--mut:#667;--line:#dde1ec;--acc:#1f5fbf;
 --c1:#d64545;--c2:#2e9e6b;--c3:#1f5fbf;--c4:#8a52c9;--c5:#d98a1c;--c6:#0e9aa7;--c7:#777;
@@ -55,21 +57,56 @@ header{flex-wrap:wrap}header>div:first-child{min-width:0}
 .tile:hover{transform:translateY(-3px);border-color:#b8905a;box-shadow:0 10px 24px rgba(27,42,107,.18)}
 .tile .ic{font-size:36px}.tile b{display:block;font-size:17px;margin-top:6px;color:#1b2a6b}.tile span{display:block;font-size:12.5px;color:var(--mut);margin-top:5px}
 @media(max-width:600px){.hero h1{font-size:21px}.hero img{width:130px;height:130px}}
+/* ===== Theme: lavender studio ===== */
+:root{--bg:#f4f2ff;--card:#fff;--ink:#1d1a3b;--mut:#6a6988;--line:#e7e4f8;--acc:#6d5bf0;--soft:#efeaff}
+body{font-family:"Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(900px 480px at 6% 0%,rgba(99,102,241,.16),transparent 60%),radial-gradient(900px 520px at 100% 4%,rgba(236,72,153,.12),transparent 60%),linear-gradient(180deg,#f8f6ff,#f1eefe);background-attachment:fixed}
+header{background:rgba(255,255,255,.9);backdrop-filter:blur(10px);color:var(--ink);margin:12px auto 0;max-width:1468px;width:calc(100% - 32px);border-radius:22px;border:1px solid var(--line);box-shadow:0 6px 24px rgba(99,70,200,.10);padding:10px 18px}
+header h1{color:var(--ink);font-size:17px;font-weight:800}header p{color:var(--mut);opacity:1}
+.hbtn{background:#fff;color:#5b45e6;border:1px solid #d9d2fb;border-radius:999px;padding:8px 16px;font-weight:700}.hbtn:hover{background:var(--soft)}
+.card{border-radius:20px;border:1px solid rgba(124,92,240,.12);box-shadow:0 8px 28px rgba(99,70,200,.07);padding:18px}
+.card h2{font-size:17px;font-weight:800;color:var(--ink)}
+label{font-weight:600}
+input,select,textarea{background:#f8f7ff;border:1px solid #e4e0fb;border-radius:12px;padding:10px 12px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(109,91,240,.18);background:#fff}
+button.btn{background:linear-gradient(135deg,#6d5bf0,#a855f7);border-radius:999px;padding:10px 22px;font-weight:700;box-shadow:0 6px 16px rgba(109,91,240,.30)}button.btn:hover{filter:brightness(1.07)}
+button.sm{border-radius:999px;border:1px solid #ddd6fb;background:#fff;color:#5b45e6;padding:5px 12px;font-weight:600}button.sm:hover{background:var(--soft)}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--mut)}th,td{border-bottom:1px solid #eeebfb}
+.mrow td{background:#f3f0ff;color:#4b36d6}
+.cal{border-color:#eeebfb}.dow{background:#f6f4ff;border-color:#eeebfb}.day{background:#fff;border-color:#eeebfb}.day.out{background:#faf9ff}
+.day.today b{background:linear-gradient(135deg,#6d5bf0,#a855f7)}.chip{border-radius:8px}
+nav.side{border-radius:20px;border:1px solid rgba(124,92,240,.12);box-shadow:0 8px 28px rgba(99,70,200,.07);padding:10px;gap:4px}
+nav.side button{border:0;background:transparent;color:#4d4b6c;border-radius:14px;padding:12px 14px;font-weight:600}nav.side button:hover{background:#f6f3ff}
+nav.side button.on{background:#ebe7ff;color:#5b45e6;font-weight:800}
+#bInfo{font-size:11px;line-height:1.55;color:var(--mut);padding:10px 12px 4px;margin-top:6px;border-top:1px solid #eeebfb}
+@media(max-width:700px){#bInfo{display:none}}
+a{color:#5b45e6}
+.eyebrow{display:inline-block;padding:6px 16px;border-radius:999px;background:#fff;border:1px solid #e3defa;color:#5b45e6;font-weight:800;font-size:11px;letter-spacing:.24em;box-shadow:0 2px 8px rgba(99,70,200,.08);margin-top:6px}
+.hero h1{color:#14112f;font-weight:800;font-size:36px;letter-spacing:-.02em;line-height:1.15}
+.grad{background:linear-gradient(90deg,#6366f1,#a855f7 55%,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero img{border:5px solid #fff;box-shadow:0 10px 32px rgba(109,91,240,.30)}
+.tile{border-radius:22px;border:1px solid rgba(124,92,240,.12);box-shadow:0 8px 28px rgba(99,70,200,.08);padding:26px 18px}
+.tile:hover{border-color:#c4b5fd;box-shadow:0 16px 36px rgba(109,91,240,.22)}
+.tile .ic{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#efeaff,#fbeaff);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-size:28px}
+.tile b{color:#1d1a3b;font-weight:800}
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;max-width:860px;margin:26px auto 0;background:rgba(255,255,255,.72);border:1px solid rgba(124,92,240,.12);border-radius:22px;padding:18px 22px;box-shadow:0 8px 28px rgba(99,70,200,.06);text-align:left}
+.feat b{display:block;font-size:14px;font-weight:800}.feat span{display:block;font-size:12.5px;color:var(--mut);margin-top:2px}
+@media(max-width:600px){.hero h1{font-size:25px}header{width:calc(100% - 20px)}}
 .hide{display:none}
 </style></head><body>
-<header id="hdr" class="hide"><div style="display:flex;align-items:center;gap:10px"><img class="hlogo" src="/ctde-logo.png" alt="CTDE"><div><h1>Faculty &amp; Employee Leave / Travel Calendar</h1><p>College of Technological and Developmental Education</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="hbtn" onclick="go('home')">🏠 Home</button><button id="hb" class="hbtn" onclick="toggleView()">Admin</button></div></header>
+<header id="hdr" class="hide"><div style="display:flex;align-items:center;gap:10px"><img class="hlogo" src="/ctde-logo.png" alt="CTDE"><div><h1 id="hT">Faculty &amp; Employee Leave / Travel Calendar</h1><p>College of Technological and Developmental Education</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="hbtn" onclick="go('home')">🏠 Home</button><button id="hb" class="hbtn" onclick="toggleView()">Admin</button></div></header>
 <main>
 <section id="secHome">
- <div class="hero"><img src="/ctde-logo.png" alt="CTDE seal"><h1>College of Technological and Developmental Education</h1><p>Camarines Sur Polytechnic Colleges · Nabua, Camarines Sur</p></div>
+ <div class="hero"><img src="/ctde-logo.png" alt="CTDE seal"><span class="eyebrow">CTDE PORTAL</span><h1>College of <span class="grad">Technological and Developmental Education</span></h1><p>Camarines Sur Polytechnic Colleges · Nabua, Camarines Sur</p></div>
  <div class="tiles">
   <button class="tile" onclick="go('viewer')"><div class="ic">📅</div><b>Calendar</b><span>View leave and travel schedules by month</span></button>
   <button class="tile" onclick="go('admin')"><div class="ic">🛠️</div><b>Access</b><span>Manage requests, types and names · password required</span></button>
   <button class="tile" onclick="go('comms')"><div class="ic">📨</div><b>Communications</b><span>Incoming documents log · password required</span></button>
  </div>
+ <div class="feat"><div><b>Shared calendar</b><span>Everyone sees the same schedule</span></div><div><b>Organized records</b><span>Requests and communications in one place</span></div><div><b>Excel &amp; Drive backup</b><span>Automatic dated backups</span></div><div><b>Protected admin</b><span>Password-only editing</span></div></div>
 </section>
 <section id="secAdmin" class="hide">
  <div class="card hide" id="gate"><h2>Admin login</h2><div class="grid2"><div><label>Password</label><input type="password" id="gP" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateGo()"></div></div><p style="margin:12px 0 0"><button class="btn" onclick="gateGo()">Login</button> <span id="gM" class="note"></span></p></div>
- <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button id="bBtn" onclick="backupNow()">☁️ Backup to Drive</button><button onclick="lockAdmin()">🔒 Lock</button></nav>
+ <div class="adm hide" id="admWrap"><nav id="aTabs" class="side"><button id="tReq" onclick="atab('req')">📋 Requests</button><button id="tLists" onclick="atab('lists')">🏷️ Types &amp; Names</button><button id="bBtn" onclick="backupNow()">☁️ Backup to Drive</button><button onclick="lockAdmin()">🔒 Lock</button><div id="bInfo"></div></nav>
 <div class="admc">
  <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
@@ -145,7 +182,7 @@ let curView="home",commsMode=false;
 function route(){const h=location.hash,v=h==="#admin"||h==="#comms"?"admin":h==="#viewer"?"viewer":"home";curView=v;
  if(v==="admin")curTab=h==="#comms"?"comms":"req";
  $("secHome").classList.toggle("hide",v!=="home");$("secAdmin").classList.toggle("hide",v!=="admin");$("secViewer").classList.toggle("hide",v!=="viewer");$("hdr").classList.toggle("hide",v==="home");
- commsMode=h==="#comms";$("hb").classList.toggle("hide",v!=="admin");$("hb").textContent="← Faculty View";render();if(v==="admin"&&curTab==="comms"&&pw)loadComms()}
+ commsMode=h==="#comms";$("hT").textContent=h==="#comms"?"Incoming Communications":h==="#admin"?"Admin · Leave / Travel Requests":"Faculty & Employee Leave / Travel Calendar";$("hb").classList.toggle("hide",v!=="admin");$("hb").textContent="← Faculty View";render();if(v==="admin"&&curTab==="comms"&&pw)loadComms();if(v==="admin"&&pw)loadBackupInfo()}
 function toggleView(){go(curView==="admin"?"viewer":"admin")}
 addEventListener("hashchange",route);
 async function api(path,opt={}){
@@ -184,7 +221,7 @@ function render(){
   $("vRows").innerHTML=l.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(lbl(r))}</td><td>${range(r)}</td><td>${fmt(r.requested)}</td><td>${fmt(r.approved)}</td><td>${esc(allRem(r))}</td></tr>`).join("")||`<tr><td colspan="6" class="note">No requests found for this month.</td></tr>`}}
 async function gateGo(){
  const p=$("gP").value;if(!p)return;
- try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render();if(curTab==="comms")loadComms()}
+ try{const r=await fetch("/api/login",{method:"POST",headers:{"X-Admin-Password":p}});if(!r.ok)throw 0;pw=p;$("gP").value="";$("gM").textContent="";render();if(curTab==="comms")loadComms();loadBackupInfo()}
  catch(e){$("gM").textContent="Wrong password."}}
 let curTab="req";
 function atab(t){curTab=t;render();if(t==="comms")loadComms()}
@@ -221,8 +258,12 @@ async function saveComm(){
  const body=JSON.stringify({received:$("mDate").value,type:t,sub:subs?$("mSub").value:"",other:t==="Others"?$("mOther").value.trim():"",subject:$("mSubject").value.trim(),from:$("mFrom").value.trim(),action:$("mAction").value.trim()});
  try{const was=!!mEdit;comms=await api(was?"comms/"+mEdit:"comms",{method:was?"PATCH":"POST",body});resetComm();$("mMsg").textContent=was?"Updated.":"Saved.";renderComms()}catch(e){commFail(e)}}
 async function delComm(id){if(!confirm("Delete this record?"))return;try{comms=await api("comms/"+id,{method:"DELETE"});if(mEdit===id)resetComm();renderComms()}catch(e){commFail(e)}}
+const kb=n=>n<1024?n+" B":n<1048576?(n/1024).toFixed(1)+" KB":n<1073741824?(n/1048576).toFixed(1)+" MB":(n/1073741824).toFixed(0)+" GB";
+async function loadBackupInfo(){if(!pw)return;
+ try{const x=await api("backup"),d=(i,o)=>i?new Date(i).toLocaleString("en-PH",o||{dateStyle:"medium",timeStyle:"short"}):"never";
+  $("bInfo").innerHTML=(x.configured?"":"⚠️ Drive backup not set up<br>")+"Last backup: "+d(x.lastBackupAt)+"<br>Data size: "+kb(x.sizes.total)+" of "+kb(x.maxBytes)+"<br>Auto backup &amp; clear at "+kb(x.maxBytes)+(x.nextClear?"<br>or on "+d(x.nextClear,{dateStyle:"medium"}):"")+(x.lastError?"<br>⚠️ Last backup failed":"")}catch(e){}}
 async function backupNow(){const b=$("bBtn"),old=b.textContent;b.disabled=true;b.textContent="⏳ Backing up…";
- try{const r=await api("backup",{method:"POST"});alert(r.ok?"Backup saved to Google Drive:\n"+r.file:"Backup failed: "+(r.error||"unknown error"))}
+ try{const r=await api("backup",{method:"POST"});alert(r.ok?"Backup saved to Google Drive:\n"+r.file:"Backup failed: "+(r.error||"unknown error"));loadBackupInfo()}
  catch(e){if(e.status===401){pw=null;render()}else alert("Backup failed (error "+(e.status||"network")+").")}
  b.disabled=false;b.textContent=old}
 function lockAdmin(){pw=null;curTab="req";comms=[];resetForm();resetComm();render()}
