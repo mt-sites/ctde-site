@@ -22,6 +22,20 @@ async function same(a, b) { // constant-time comparison of SHA-256 digests
   return d === 0;
 }
 
+// Sends a full copy of the data to the Google Apps Script web app, which saves a dated .xlsx in Google Drive.
+async function backup(env) {
+  if (!env.BACKUP_URL || !env.BACKUP_TOKEN) return { ok: false, error: "BACKUP_URL / BACKUP_TOKEN secrets are not set" };
+  const get = async (k) => JSON.parse((await env.REQUESTS.get(k)) || "null");
+  const payload = { token: env.BACKUP_TOKEN, at: new Date().toISOString(),
+    requests: (await get("list")) || [], comms: (await get("comms")) || [],
+    config: (await get("config")) || { types: [...BASE_TYPES, ...NEW_TYPES], names: [] } };
+  try {
+    const r = await fetch(env.BACKUP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload), redirect: "follow" });
+    const t = await r.text();
+    try { return JSON.parse(t); } catch { return { ok: false, error: "Unexpected reply from Google Apps Script (check the Web app is deployed for Anyone)", status: r.status }; }
+  } catch (e) { return { ok: false, error: String(e) }; }
+}
+
 export default {
   async fetch(req, env) {
     const p = new URL(req.url).pathname.replace(/\/+$/, ""), m = req.method;
@@ -49,6 +63,7 @@ export default {
     if (!ok) { await new Promise((r) => setTimeout(r, 800)); return json({ error: "unauthorized" }, 401); }
 
     if (p === "/api/login" && m === "POST") return json({ ok: true });
+    if (p === "/api/backup" && m === "POST") return json(await backup(env));
 
     // ---- Incoming communications (admin only) ----
     const cleanComm = (b) => {
@@ -143,4 +158,5 @@ export default {
     }
     return json({ error: "not found" }, 404);
   },
+  async scheduled(event, env, ctx) { ctx.waitUntil(backup(env)); }, // daily backup (see wrangler.toml)
 };
