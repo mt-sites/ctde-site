@@ -91,6 +91,15 @@ a{color:#5b45e6}
 .feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;max-width:860px;margin:26px auto 0;background:rgba(255,255,255,.72);border:1px solid rgba(124,92,240,.12);border-radius:22px;padding:18px 22px;box-shadow:0 8px 28px rgba(99,70,200,.06);text-align:left}
 .feat b{display:block;font-size:14px;font-weight:800}.feat span{display:block;font-size:12.5px;color:var(--mut);margin-top:2px}
 @media(max-width:600px){.hero h1{font-size:25px}header{width:calc(100% - 20px)}}
+.mdl{position:fixed;inset:0;background:rgba(29,26,59,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.mbox{background:#fff;border-radius:22px;padding:26px 24px 22px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(60,40,160,.35);text-align:center}
+.mbox h3{margin:0 0 8px;font-size:19px;font-weight:800;color:#1d1a3b}.mbox p{margin:0 0 20px;color:var(--mut);font-size:14px;line-height:1.5;white-space:pre-line;word-break:break-word}
+.mbtns{display:flex;gap:10px;justify-content:center}.mbtns button{min-width:110px}
+button.btn.ghost{background:#fff;color:#5b45e6;border:1px solid #ddd6fb;box-shadow:none}button.btn.ghost:hover{background:var(--soft)}
+.dlg{position:fixed;inset:0;background:rgba(29,26,59,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.dbox{background:#fff;border-radius:22px;padding:24px 24px 20px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(60,40,160,.35);border:1px solid rgba(124,92,240,.15)}
+.dbox h3{margin:0 0 8px;font-size:18px;font-weight:800;color:#1d1a3b}.dbox p{margin:0 0 18px;color:var(--mut);font-size:14px;white-space:pre-line;line-height:1.5;overflow-wrap:anywhere}
+.dbtns{display:flex;gap:10px;justify-content:flex-end}.dbtns .sm{padding:10px 20px;font-size:14px}
 .hide{display:none}
 </style></head><body>
 <header id="hdr" class="hide"><div style="display:flex;align-items:center;gap:10px"><img class="hlogo" src="/ctde-logo.png" alt="CTDE"><div><h1 id="hT">Faculty &amp; Employee Leave / Travel Calendar</h1><p>College of Technological and Developmental Education</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="hbtn" onclick="go('home')">🏠 Home</button><button id="hb" class="hbtn" onclick="toggleView()">Admin</button></div></header>
@@ -98,8 +107,8 @@ a{color:#5b45e6}
 <section id="secHome">
  <div class="hero"><img src="/ctde-logo.png" alt="CTDE seal"><span class="eyebrow">CTDE PORTAL</span><h1>College of <span class="grad">Technological and Developmental Education</span></h1><p>Camarines Sur Polytechnic Colleges · Nabua, Camarines Sur</p></div>
  <div class="tiles">
-  <button class="tile" onclick="go('viewer')"><div class="ic">📅</div><b>Calendar</b><span>View leave and travel schedules by month</span></button>
-  <button class="tile" onclick="go('admin')"><div class="ic">🛠️</div><b>Access</b><span>Manage requests, types and names · password required</span></button>
+  <button class="tile" onclick="go('viewer')"><div class="ic">📅</div><b>Faculty Calendar</b><span>View leave and travel schedules by month</span></button>
+  <button class="tile" onclick="go('admin')"><div class="ic">🛠️</div><b>Admin</b><span>Manage requests, types and names · password required</span></button>
   <button class="tile" onclick="go('comms')"><div class="ic">📨</div><b>Communications</b><span>Incoming documents log · password required</span></button>
  </div>
  <div class="feat"><div><b>Shared calendar</b><span>Everyone sees the same schedule</span></div><div><b>Organized records</b><span>Requests and communications in one place</span></div><div><b>Excel &amp; Drive backup</b><span>Automatic dated backups</span></div><div><b>Protected admin</b><span>Password-only editing</span></div></div>
@@ -156,6 +165,8 @@ a{color:#5b45e6}
  <div class="card"><h2 id="vT">Requests this month</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Dates</th><th>Requested</th><th>Approved</th><th>Remarks</th></tr></thead><tbody id="vRows"></tbody></table></div></div>
 </section>
 </main>
+<div id="dlg" class="dlg hide"><div class="dbox"><h3 id="dlgT"></h3><p id="dlgB"></p><div class="dbtns"><button class="sm" id="dlgNo">No</button><button class="btn" id="dlgYes">Yes</button></div></div></div>
+<div id="mdl" class="mdl hide"><div class="mbox"><h3 id="mdT"></h3><p id="mdP"></p><div class="mbtns" id="mdB"></div></div></div>
 <script>
 const PAL=["#c2185b","#00796b","#5e35b1","#ef6c00","#2e7d32","#0277bd","#6d4c41","#455a64","#9e9d24","#d81b60","#00838f","#7b1fa2"];
 let cfg={names:[],types:[["Sick Leave","#d64545"],["Wellness Leave","#2e9e6b"],["Travel Order","#1f5fbf"],["L&D (Learning & Development)","#8a52c9"],["Vacation Leave","#d98a1c"],["Official Business","#0e9aa7"],["Mandatory/Forced Leave","#c2185b"],["Solo Parent Leave","#00796b"]].map(([name,color])=>({name,color}))};
@@ -262,9 +273,25 @@ const kb=n=>n<1024?n+" B":n<1048576?(n/1024).toFixed(1)+" KB":n<1073741824?(n/10
 async function loadBackupInfo(){if(!pw)return;
  try{const x=await api("backup"),d=(i,o)=>i?new Date(i).toLocaleString("en-PH",o||{dateStyle:"medium",timeStyle:"short"}):"never";
   $("bInfo").innerHTML=(x.configured?"":"⚠️ Drive backup not set up<br>")+"Last backup: "+d(x.lastBackupAt)+"<br>Data size: "+kb(x.sizes.total)+" of "+kb(x.maxBytes)+"<br>Auto backup &amp; clear at "+kb(x.maxBytes)+(x.nextClear?"<br>or on "+d(x.nextClear,{dateStyle:"medium"}):"")+(x.lastError?"<br>⚠️ Last backup failed":"")}catch(e){}}
-async function backupNow(){const b=$("bBtn"),old=b.textContent;b.disabled=true;b.textContent="⏳ Backing up…";
- try{const r=await api("backup",{method:"POST"});alert(r.ok?"Backup saved to Google Drive:\n"+r.file:"Backup failed: "+(r.error||"unknown error"));loadBackupInfo()}
- catch(e){if(e.status===401){pw=null;render()}else alert("Backup failed (error "+(e.status||"network")+").")}
+let mdCancel=null;
+function ask(title,text,yes,no){return new Promise(res=>{
+ $("mdT").textContent=title;$("mdP").textContent=text;const box=$("mdB");box.innerHTML="";
+ const done=v=>{mdCancel=null;$("mdl").classList.add("hide");res(v)};
+ if(no){const n=document.createElement("button");n.className="btn ghost";n.textContent=no;n.onclick=()=>done(false);box.appendChild(n)}
+ const y=document.createElement("button");y.className="btn";y.textContent=yes;y.onclick=()=>done(true);box.appendChild(y);
+ mdCancel=()=>done(!no);$("mdl").classList.remove("hide");y.focus()})}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&mdCancel)mdCancel()});
+$("mdl").addEventListener("click",e=>{if(e.target.id==="mdl"&&mdCancel)mdCancel()});
+function dlg(title,msg,yes,no){return new Promise(res=>{
+ $("dlgT").textContent=title;$("dlgB").textContent=msg;const y=$("dlgYes"),n=$("dlgNo");y.textContent=yes||"Yes";n.textContent=no||"No";n.classList.toggle("hide",no===null);
+ $("dlg").classList.remove("hide");y.focus();
+ const kd=e=>{if(e.key==="Escape")done(false)},done=v=>{$("dlg").classList.add("hide");y.onclick=n.onclick=null;document.removeEventListener("keydown",kd);res(v)};
+ document.addEventListener("keydown",kd);y.onclick=()=>done(true);n.onclick=()=>done(false)})}
+async function backupNow(){
+ if(!await dlg("Save a backup?","This saves a copy of all requests, communications, names and types as an Excel file in your Google Drive folder.","Yes, save backup","No"))return;
+ const b=$("bBtn"),old=b.textContent;b.disabled=true;b.textContent="⏳ Backing up…";
+ try{const r=await api("backup",{method:"POST"});await dlg(r.ok?"Backup saved":"Backup failed",r.ok?"Saved to Google Drive:\n"+r.file:(r.error||"unknown error"),"OK",null);loadBackupInfo()}
+ catch(e){if(e.status===401){pw=null;render()}else await dlg("Backup failed","Error "+(e.status||"network")+". Please try again.","OK",null)}
  b.disabled=false;b.textContent=old}
 function lockAdmin(){pw=null;curTab="req";comms=[];resetForm();resetComm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent=$("msg2").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
