@@ -100,6 +100,9 @@ button.btn.ghost{background:#fff;color:#5b45e6;border:1px solid #ddd6fb;box-shad
 .dbox{background:#fff;border-radius:22px;padding:24px 24px 20px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(60,40,160,.35);border:1px solid rgba(124,92,240,.15)}
 .dbox h3{margin:0 0 8px;font-size:18px;font-weight:800;color:#1d1a3b}.dbox p{margin:0 0 18px;color:var(--mut);font-size:14px;white-space:pre-line;line-height:1.5;overflow-wrap:anywhere}
 .dbtns{display:flex;gap:10px;justify-content:flex-end}.dbtns .sm{padding:10px 20px;font-size:14px}
+.ac{position:relative}.aclist{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e4e0fb;border-radius:14px;box-shadow:0 12px 32px rgba(60,40,160,.20);max-height:250px;overflow:auto;z-index:30;padding:4px}
+.aclist div{padding:9px 12px;border-radius:10px;cursor:pointer;font-size:14px}.aclist div.act,.aclist div[data-i]:hover{background:#efeaff;color:#4b36d6}
+.aclist mark{background:none;color:#6d5bf0;font-weight:800}.aclist .hint{cursor:default;color:var(--mut);font-size:12.5px}
 .hide{display:none}
 </style></head><body>
 <header id="hdr" class="hide"><div style="display:flex;align-items:center;gap:10px"><img class="hlogo" src="/ctde-logo.png" alt="CTDE"><div><h1 id="hT">Faculty &amp; Employee Leave / Travel Calendar</h1><p>College of Technological and Developmental Education</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="hbtn" onclick="go('home')">🏠 Home</button><button id="hb" class="hbtn" onclick="toggleView()">Admin</button></div></header>
@@ -119,7 +122,7 @@ button.btn.ghost{background:#fff;color:#5b45e6;border:1px solid #ddd6fb;box-shad
 <div class="admc">
  <div class="card" id="formCard"><h2><span id="fT">New request</span> <span style="float:right"><button class="sm" onclick="lockAdmin()">🔒 Lock</button></span></h2>
   <div class="grid2">
-   <div><label>Faculty / employee name *</label><select id="fName"></select></div>
+   <div><label>Faculty / employee name *</label><div class="ac"><input id="fName" autocomplete="off" spellcheck="false" placeholder="Type to search or add a name…" role="combobox" aria-autocomplete="list" aria-controls="acList"><div id="acList" class="aclist hide" role="listbox"></div></div></div>
    <div><label>Type of request *</label><select id="fType"></select></div>
    <div id="otherWrap" class="hide"><label>Specify (others) *</label><input id="fOther"></div>
    <div><label>Start date *</label><input type="date" id="fStart"></div>
@@ -186,7 +189,7 @@ fillSelects();
 $("vM").innerHTML=MN.map((m,i)=>`<option value="${i}">${m}</option>`).join("");
 $("vM").value=vm;$("vY").value=vy;$("fReq").value=iso(now);
 $("fType").onchange=()=>{if($("fType").value==="__add__"){addType(prompt("New type of request:"));return}$("otherWrap").classList.toggle("hide",$("fType").value!=="Others")};
-$("fName").onchange=()=>{if($("fName").value==="__add__")addName(prompt("New faculty / employee name:"))};
+
 $("vM").onchange=()=>{vm=+$("vM").value;render()};$("vY").oninput=()=>{const y=+$("vY").value;if(y>1999&&y<2101){vy=y;render()}};$("vS").oninput=render;
 function go(v){location.hash=v}
 let curView="home",commsMode=false;
@@ -295,16 +298,32 @@ async function backupNow(){
  b.disabled=false;b.textContent=old}
 function lockAdmin(){pw=null;curTab="req";comms=[];resetForm();resetComm();render()}
 function fail(e){if(e.status===401){pw=null;render();$("gM").textContent="Session expired. Log in again."}else $("msg").textContent=$("msg2").textContent="Could not save (error "+(e.status||"network")+(e.msg?": "+e.msg:"")+"). "+(e.msg==="invalid status"?"This is the OLD Worker. Deploy the new worker.js and check /api/version.":"")}
+let acHits=[],acI=-1;
+function acShow(){const raw=$("fName").value.replace(/\s+/g," ").trimStart(),q=raw.trim().toLowerCase(),l=$("acList"),all=allNames();
+ acHits=(q?all.filter(n=>n.toLowerCase().includes(q)).sort((a,b)=>(b.toLowerCase().startsWith(q)-a.toLowerCase().startsWith(q))||a.localeCompare(b)):all).slice(0,8);
+ acI=acHits.findIndex(n=>n.toLowerCase()===q);if(acI<0&&q)acI=-1;
+ const hl=n=>{const i=n.toLowerCase().indexOf(q);return q&&i>=0?esc(n.slice(0,i))+"<mark>"+esc(n.slice(i,i+q.length))+"</mark>"+esc(n.slice(i+q.length)):esc(n)};
+ let h=acHits.map((n,i)=>`<div data-i="${i}" role="option" onmousedown="event.preventDefault();acPick(${i})">${hl(n)}</div>`).join("");
+ if(q&&!all.some(n=>n.toLowerCase()===q))h+=`<div class="hint">＋ New name: “${esc(raw.trim())}” will be saved when you submit</div>`;
+ if(!h&&!q)h='<div class="hint">No saved names yet. Type a name to add one.</div>';
+ l.innerHTML=h;l.classList.toggle("hide",!h);acMark()}
+function acMark(){[...$("acList").querySelectorAll("[data-i]")].forEach(d=>d.classList.toggle("act",+d.dataset.i===acI))}
+function acPick(i){if(acHits[i]==null)return;$("fName").value=acHits[i];$("fName").classList.remove("bad");$("acList").classList.add("hide");acI=-1}
+$("fName").addEventListener("input",()=>{acI=-1;acShow()});
+$("fName").addEventListener("focus",acShow);
+$("fName").addEventListener("blur",()=>setTimeout(()=>$("acList").classList.add("hide"),120));
+$("fName").addEventListener("keydown",e=>{const open=!$("acList").classList.contains("hide");
+ if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!open)acShow();if(!acHits.length)return;acI=e.key==="ArrowDown"?(acI+1)%acHits.length:(acI<=0?acHits.length-1:acI-1);acMark();$("acList").querySelector(".act")?.scrollIntoView({block:"nearest"})}
+ else if(e.key==="Enter"&&open&&acI>=0){e.preventDefault();acPick(acI)}
+ else if(e.key==="Escape"&&open){e.preventDefault();$("acList").classList.add("hide")}});
 function ensureOpt(sel,v){if(v&&![...sel.options].some(o=>o.value===v))sel.insertAdjacentHTML("afterbegin",`<option>${esc(v)}</option>`)}
 function hsl2hex(h,s,l){const a=s*Math.min(l,1-l),f=n=>{const k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,"0")};return"#"+f(0)+f(8)+f(4)}
 function nextColor(){const used=new Set(cfg.types.map(t=>t.color.toLowerCase()));return PAL.find(c=>!used.has(c))||hsl2hex((cfg.types.length*137)%360,.6,.38)}
-function allNames(){return[...cfg.names].sort((a,b)=>a.localeCompare(b))}
+function allNames(){const m=new Map();[...cfg.names,...reqs.map(r=>r.name)].forEach(n=>{n=String(n||"").trim();if(n&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),n)});return[...m.values()].sort((a,b)=>a.localeCompare(b))}
 function fillSelects(){
- const ft=$("fType"),fn=$("fName"),tv=ft.value,nv=fn.value;
+ const ft=$("fType"),tv=ft.value;
  ft.innerHTML=typeList().map(t=>`<option>${esc(t)}</option>`).join("")+`<option value="__add__">＋ Add new type…</option>`;
- fn.innerHTML=`<option value="">— Select name —</option>`+allNames().map(n=>`<option>${esc(n)}</option>`).join("")+`<option value="__add__">＋ Add new name…</option>`;
  if(tv&&tv!=="__add__"){ensureOpt(ft,tv);ft.value=tv}
- if(nv&&nv!=="__add__"){ensureOpt(fn,nv);fn.value=nv}
  $("tList").innerHTML=cfg.types.map((t,i)=>`<span class="pill"><i style="background:${t.color}"></i>${esc(t.name)}<button title="Remove" onclick="delType(${i})">×</button></span>`).join("")||'<span class="note">No types yet.</span>';
  $("nList").innerHTML=cfg.names.map((n,i)=>`<div class="nrow"><span>${esc(n)}</span><span><button class="sm" onclick="editName(${i})">Edit</button><button class="sm" onclick="delName(${i})">Delete</button></span></div>`).join("")||'<span class="note">No names yet.</span>'}
 async function saveCfg(rn){try{cfg=await api("config",{method:"PUT",body:JSON.stringify({...cfg,renames:rn||[]})});if(rn&&rn.length)reqs=await api("requests");fillSelects();render()}catch(e){fail(e)}}
@@ -326,7 +345,7 @@ document.addEventListener("input",e=>e.target.classList&&e.target.classList.remo
 function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
 function editReq(id){const r=reqs.find(x=>x.id===id);if(!r)return;editId=id;
- ensureOpt($("fName"),r.name);ensureOpt($("fType"),r.type);$("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
+ ensureOpt($("fType"),r.type);$("fName").value=r.name;$("fType").value=r.type;$("otherWrap").classList.toggle("hide",r.type!=="Others");$("fOther").value=r.other||"";
  $("fStart").value=r.start;$("fEnd").value=r.end;$("fReq").value=r.requested;$("fRem").value=allRem(r);$("fAppr").value=r.approved||"";
  $("fT").textContent="Edit request";$("sBtn").textContent="Update request";$("cBtn").classList.remove("hide");$("msg").textContent="";
  $("formCard").scrollIntoView({behavior:"smooth"})}
@@ -337,12 +356,13 @@ async function addReq(){
  const miss=need.filter(([i])=>!$(i).value.trim()||$(i).value==="__add__");
  miss.forEach(([i])=>$(i).classList.add("bad"));
  if(miss.length){$("msg").textContent="Please fill in: "+miss.map(m=>m[1]).join(", ")+".";$(miss[0][0]).focus();return}
- const name=$("fName").value.trim(),type=$("fType").value,s=$("fStart").value,e=$("fEnd").value;
+ const typed=$("fName").value.replace(/\s+/g," ").trim(),name=allNames().find(n=>n.toLowerCase()===typed.toLowerCase())||typed,type=$("fType").value,s=$("fStart").value,e=$("fEnd").value;
  if(e<s){$("msg").textContent="End date is before start date.";$("fEnd").classList.add("bad");return}
  const body=JSON.stringify({name,type,other:type==="Others"?$("fOther").value.trim():"",start:s,end:e,requested:$("fReq").value,approved:$("fAppr").value,rem:$("fRem").value.trim()});
  try{const wasEdit=!!editId;
   reqs=wasEdit?await api("requests/"+editId,{method:"PATCH",body}):await api("requests",{method:"POST",body});
-  resetForm();$("msg").textContent=wasEdit?"Request updated.":"Request saved.";render()}catch(x){fail(x)}}
+  resetForm();$("msg").textContent=wasEdit?"Request updated.":"Request saved.";render();
+  if(!cfg.names.some(n=>n.toLowerCase()===name.toLowerCase())){cfg.names.push(name);saveCfg()}}catch(x){fail(x)}}
 async function del(id){if(!confirm("Delete this request?"))return;try{reqs=await api("requests/"+id,{method:"DELETE"});if(editId===id)resetForm();render()}catch(x){fail(x)}}
 function allRem(r){return [r.rem,r.venue&&"Venue: "+r.venue,r.purpose&&"Purpose: "+r.purpose,r.reason&&"Reason: "+r.reason].filter(Boolean).join(" · ")}
 function details(r){const t=allRem(r);return t?`<div class="note">${esc(t)}</div>`:""}
