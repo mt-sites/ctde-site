@@ -3,6 +3,7 @@
 // Binding: REQUESTS         (a KV namespace)
 const DOC = { "Communication": ["Internal", "External"], "MEMO": ["Administrative", "Institutional", "VPAA", "Others"],
   "T.O.": ["Office of the President", "VPAA"], "Endorsement": null, "Others": null };
+const MD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, DIM = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; // birthdays are stored as month-day only ("MM-DD")
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const BASE_TYPES = [
   { name: "Sick Leave", color: "#d64545" }, { name: "Wellness Leave", color: "#2e9e6b" }, { name: "Travel Order", color: "#1f5fbf" },
@@ -180,7 +181,9 @@ export default {
         for (const r of l) { const m = rn.find(([f]) => f === r.name); if (m) { r.name = m[1]; ch = true; } }
         if (ch) await save(l);
       }
-      const c = { v: 2, types, names }; await env.REQUESTS.put("config", JSON.stringify(c)); return json(c);
+      const bdIn = b.birthdays && typeof b.birthdays === "object" ? b.birthdays : {}, birthdays = {};
+      for (const n of names) { const v = bdIn[n]; if (typeof v === "string" && MD.test(v) && +v.slice(3) <= DIM[+v.slice(0, 2) - 1]) birthdays[n] = v; }
+      const c = { v: 2, types, names, birthdays }; await env.REQUESTS.put("config", JSON.stringify(c)); return json(c);
     }
 
     if (p === "/api/requests" && m === "POST") {
