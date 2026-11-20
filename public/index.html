@@ -103,6 +103,18 @@ button.btn.ghost{background:#fff;color:#5b45e6;border:1px solid #ddd6fb;box-shad
 .ac{position:relative}.aclist{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e4e0fb;border-radius:14px;box-shadow:0 12px 32px rgba(60,40,160,.20);max-height:250px;overflow:auto;z-index:30;padding:4px}
 .aclist div{padding:9px 12px;border-radius:10px;cursor:pointer;font-size:14px}.aclist div.act,.aclist div[data-i]:hover{background:#efeaff;color:#4b36d6}
 .aclist mark{background:none;color:#6d5bf0;font-weight:800}.aclist .hint{cursor:default;color:var(--mut);font-size:12.5px}
+a.tile{text-decoration:none;display:block}
+.tiles{grid-template-columns:repeat(4,minmax(0,1fr));max-width:1000px}.feat{max-width:1000px}
+@media(max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.tiles{grid-template-columns:1fr}}
+.bdtag{color:#a855f7;font-weight:700;margin-left:6px;font-size:12px}
+.bbox{text-align:center;position:relative;overflow:hidden}.bcake{font-size:58px;line-height:1;animation:bpop .6s ease}
+.bbox h3{font-size:26px;margin:8px 0 6px;background:linear-gradient(90deg,#6366f1,#a855f7 55%,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}
+#bNames div{font-size:19px;font-weight:800;color:#1d1a3b;margin:4px 0}.bbox p{margin:12px 0 18px}
+.conf{position:absolute;top:-14px;width:8px;height:12px;border-radius:2px;opacity:.95;animation:cf linear forwards;pointer-events:none}
+@keyframes cf{to{transform:translateY(460px) rotate(540deg);opacity:0}}
+@keyframes bpop{0%{transform:scale(.3) rotate(-12deg);opacity:0}70%{transform:scale(1.15) rotate(4deg)}100%{transform:scale(1);opacity:1}}
+@media(prefers-reduced-motion:reduce){.conf{display:none}.bcake{animation:none}}
 .hide{display:none}
 </style></head><body>
 <header id="hdr" class="hide"><div style="display:flex;align-items:center;gap:10px"><img class="hlogo" src="/ctde-logo.png" alt="CTDE"><div><h1 id="hT">Faculty &amp; Employee Leave / Travel Calendar</h1><p>College of Technological and Developmental Education</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="hbtn" onclick="go('home')">🏠 Home</button><button id="hb" class="hbtn" onclick="toggleView()">Admin</button></div></header>
@@ -113,6 +125,7 @@ button.btn.ghost{background:#fff;color:#5b45e6;border:1px solid #ddd6fb;box-shad
   <button class="tile" onclick="go('viewer')"><div class="ic">📅</div><b>Calendar</b><span>View leave and travel schedules by month</span></button>
   <button class="tile" onclick="go('admin')"><div class="ic">🛠️</div><b>Access</b><span>Manage requests, types and names · password required</span></button>
   <button class="tile" onclick="go('comms')"><div class="ic">📨</div><b>Communications</b><span>Incoming documents log · password required</span></button>
+  <a class="tile" href="https://ctde-comp-lab.mt-sites.workers.dev" target="_blank" rel="noopener noreferrer"><div class="ic">💻</div><b>Computer Laboratory</b><span>Student and faculty reservation · opens in a new tab</span></a>
  </div>
  <div class="feat"><div><b>Shared calendar</b><span>Everyone sees the same schedule</span></div><div><b>Organized records</b><span>Requests and communications in one place</span></div><div><b>Excel &amp; Drive backup</b><span>Automatic dated backups</span></div><div><b>Protected admin</b><span>Password-only editing</span></div></div>
 </section>
@@ -135,7 +148,7 @@ button.btn.ghost{background:#fff;color:#5b45e6;border:1px solid #ddd6fb;box-shad
  </div>
  <div class="card" id="mgrCard"><h2>Types &amp; names</h2><div class="grid2">
   <div><label>Add type of request (color is assigned automatically)</label><div style="display:flex;gap:6px"><input id="nType" placeholder="e.g. Maternity Leave" onkeydown="if(event.key==='Enter')addType($('nType').value)"><button class="btn" onclick="addType($('nType').value)">Add</button></div><div class="mgr" id="tList"></div></div>
-  <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="nlist" id="nList"></div></div></div><p class="note" id="msg2"></p></div>
+  <div><label>Add faculty / employee name (appears in the dropdown)</label><div style="display:flex;gap:6px"><input id="nName" placeholder="e.g. Maria Santos" onkeydown="if(event.key==='Enter')addName($('nName').value)"><button class="btn" onclick="addName($('nName').value)">Add</button></div><div class="nlist" id="nList"></div><p class="note" style="margin:8px 0 0"><button class="sm" onclick="showBday(['Sample Name'])">🎂 Preview birthday popup</button></p></div></div><p class="note" id="msg2"></p></div>
  <div class="split" id="splitWrap">
  <div class="card" id="prevCard"><h2>Calendar preview</h2><div id="calA"></div></div>
  <div class="card" id="resCard"><h2>Results <span style="float:right"><button class="sm" onclick="xl()">⬇ Download Excel</button></span></h2><input id="rQ" placeholder="🔍 Search name across all months (blank = month shown in the calendar)" oninput="render()" style="margin-bottom:6px"><div id="rCount" class="note" style="margin:0 0 8px"></div><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Leave / travel dates</th><th>Date requested</th><th>Date approved</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -168,11 +181,13 @@ button.btn.ghost{background:#fff;color:#5b45e6;border:1px solid #ddd6fb;box-shad
  <div class="card"><h2 id="vT">Requests this month</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Dates</th><th>Requested</th><th>Approved</th><th>Remarks</th></tr></thead><tbody id="vRows"></tbody></table></div></div>
 </section>
 </main>
+<div id="nmDlg" class="dlg hide"><div class="dbox"><h3>Edit name</h3><label>Name</label><input id="nmName" maxlength="100" onkeydown="if(event.key==='Enter')nmSave()"><label style="margin-top:12px">Birthday (optional, month and day only)</label><div style="display:flex;gap:8px"><select id="nmM" onchange="nmDays()"></select><select id="nmD"></select></div><p id="nmErr" style="margin:10px 0 0;color:#d64545;font-size:13px"></p><div class="dbtns" style="margin-top:14px"><button class="sm" onclick="nmClose()">Cancel</button><button class="btn" onclick="nmSave()">Save</button></div></div></div>
+<div id="bday" class="dlg hide" onclick="if(event.target===this)bdClose()"><div class="dbox bbox"><div class="bcake">🎂</div><h3>Happy Birthday!</h3><div id="bNames"></div><p>Wishing you a joyful day filled with blessings from all of us at CTDE. 🎉</p><button class="btn" onclick="bdClose()">Thank you! 🎉</button></div></div>
 <div id="dlg" class="dlg hide"><div class="dbox"><h3 id="dlgT"></h3><p id="dlgB"></p><div class="dbtns"><button class="sm" id="dlgNo">No</button><button class="btn" id="dlgYes">Yes</button></div></div></div>
 <div id="mdl" class="mdl hide"><div class="mbox"><h3 id="mdT"></h3><p id="mdP"></p><div class="mbtns" id="mdB"></div></div></div>
 <script>
 const PAL=["#c2185b","#00796b","#5e35b1","#ef6c00","#2e7d32","#0277bd","#6d4c41","#455a64","#9e9d24","#d81b60","#00838f","#7b1fa2"];
-let cfg={names:[],types:[["Sick Leave","#d64545"],["Wellness Leave","#2e9e6b"],["Travel Order","#1f5fbf"],["L&D (Learning & Development)","#8a52c9"],["Vacation Leave","#d98a1c"],["Official Business","#0e9aa7"],["Mandatory/Forced Leave","#c2185b"],["Solo Parent Leave","#00796b"]].map(([name,color])=>({name,color}))};
+let cfg={birthdays:{},names:[],types:[["Sick Leave","#d64545"],["Wellness Leave","#2e9e6b"],["Travel Order","#1f5fbf"],["L&D (Learning & Development)","#8a52c9"],["Vacation Leave","#d98a1c"],["Official Business","#0e9aa7"],["Mandatory/Forced Leave","#c2185b"],["Solo Parent Leave","#00796b"]].map(([name,color])=>({name,color}))};
 const typeList=()=>cfg.types.map(t=>t.name);
 const colorOf=t=>(cfg.types.find(x=>x.name===t)||{color:"#777777"}).color;
 const MN=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -202,7 +217,7 @@ addEventListener("hashchange",route);
 async function api(path,opt={}){
  const r=await fetch("/api/"+path,{...opt,headers:{"Content-Type":"application/json",...(pw?{"X-Admin-Password":pw}:{})}});
  if(!r.ok){const e=new Error(r.status);e.status=r.status;try{e.msg=(await r.json()).error}catch(_){}throw e}return r.json()}
-async function load(){try{reqs=await api("requests")}catch(e){}try{cfg=await api("config")}catch(e){}if(pw&&curTab==="comms"){try{comms=await api("comms")}catch(e){}}render()}
+async function load(){try{reqs=await api("requests")}catch(e){}try{cfg=await api("config")}catch(e){}if(!bdDone){bdDone=true;checkBirthdays()}if(pw&&curTab==="comms"){try{comms=await api("comms")}catch(e){}}render()}
 function cal(el,y,m,list,nav){
  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay()),today=iso(new Date());
  let h=`<div class="calhead">${nav?`<button class="sm" onclick="shift(-1)">◀</button>`:""}<h3>${MN[m]} ${y}</h3>${nav?`<button class="sm" onclick="shift(1)">Next ▶</button>`:""}</div><div class="cal">`;
@@ -325,7 +340,7 @@ function fillSelects(){
  ft.innerHTML=typeList().map(t=>`<option>${esc(t)}</option>`).join("")+`<option value="__add__">＋ Add new type…</option>`;
  if(tv&&tv!=="__add__"){ensureOpt(ft,tv);ft.value=tv}
  $("tList").innerHTML=cfg.types.map((t,i)=>`<span class="pill"><i style="background:${t.color}"></i>${esc(t.name)}<button title="Remove" onclick="delType(${i})">×</button></span>`).join("")||'<span class="note">No types yet.</span>';
- $("nList").innerHTML=cfg.names.map((n,i)=>`<div class="nrow"><span>${esc(n)}</span><span><button class="sm" onclick="editName(${i})">Edit</button><button class="sm" onclick="delName(${i})">Delete</button></span></div>`).join("")||'<span class="note">No names yet.</span>'}
+ $("nList").innerHTML=cfg.names.map((n,i)=>`<div class="nrow"><span>${esc(n)}${(cfg.birthdays||{})[n]?` <small class="bdtag">🎂 ${fmtBd(cfg.birthdays[n])}</small>`:""}</span><span><button class="sm" onclick="editName(${i})">Edit</button><button class="sm" onclick="delName(${i})">Delete</button></span></div>`).join("")||'<span class="note">No names yet.</span>'}
 async function saveCfg(rn){try{cfg=await api("config",{method:"PUT",body:JSON.stringify({...cfg,renames:rn||[]})});if(rn&&rn.length)reqs=await api("requests");fillSelects();render()}catch(e){fail(e)}}
 async function addType(v){v=String(v||"").trim().slice(0,60);
  if(!v){fillSelects();return}
@@ -336,11 +351,34 @@ async function addName(v){v=String(v||"").trim().slice(0,100);
  if(!cfg.names.some(n=>n.toLowerCase()===v.toLowerCase()))cfg.names.push(v);
  $("nName").value="";await saveCfg();const m=allNames().find(n=>n.toLowerCase()===v.toLowerCase());if(m)$("fName").value=m}
 async function delType(i){if(!confirm("Remove this type from the list? Existing requests keep their type."))return;cfg.types.splice(i,1);await saveCfg()}
-async function editName(i){const old=cfg.names[i],v=String(prompt("Edit name (also updates this person's existing requests):",old)||"").trim().slice(0,100);
- if(!v||v===old)return;
- if(cfg.names.some((n,j)=>j!==i&&n.toLowerCase()===v.toLowerCase())){alert("That name already exists.");return}
- cfg.names[i]=v;await saveCfg([{from:old,to:v}])}
-async function delName(i){if(!confirm("Delete \""+cfg.names[i]+"\" from the names list? Existing requests keep this name."))return;cfg.names.splice(i,1);await saveCfg()}
+let nmIdx=-1,bdDone=false;
+const dimOf=m=>[31,29,31,30,31,30,31,31,30,31,30,31][m-1];
+function fmtBd(md){return MN[+md.slice(0,2)-1].slice(0,3)+" "+(+md.slice(3))}
+function nmDays(){const m=+$("nmM").value,cur=$("nmD").value;$("nmD").innerHTML='<option value="">Day</option>'+(m?Array.from({length:dimOf(m)},(_,i)=>`<option>${i+1}</option>`).join(""):"");$("nmD").disabled=!m;if(cur&&m&&+cur<=dimOf(m))$("nmD").value=cur}
+function editName(i){nmIdx=i;const n=cfg.names[i],bd=(cfg.birthdays||{})[n]||"";
+ $("nmName").value=n;$("nmM").innerHTML='<option value="">Month</option>'+MN.map((x,k)=>`<option value="${k+1}">${x}</option>`).join("");
+ $("nmM").value=bd?String(+bd.slice(0,2)):"";nmDays();$("nmD").value=bd?String(+bd.slice(3)):"";$("nmErr").textContent="";$("nmDlg").classList.remove("hide");$("nmName").focus()}
+function nmClose(){$("nmDlg").classList.add("hide")}
+async function nmSave(){const i=nmIdx,old=cfg.names[i],v=$("nmName").value.replace(/\s+/g," ").trim().slice(0,100),m=$("nmM").value,d=$("nmD").value;
+ if(!v){$("nmErr").textContent="Please enter a name.";return}
+ if(cfg.names.some((n,j)=>j!==i&&n.toLowerCase()===v.toLowerCase())){$("nmErr").textContent="That name already exists.";return}
+ if(!m!==!d){$("nmErr").textContent="Choose both month and day for the birthday (or leave both empty).";return}
+ const bd={...(cfg.birthdays||{})};delete bd[old];if(m)bd[v]=String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+ cfg.names[i]=v;cfg.birthdays=bd;nmClose();await saveCfg(v!==old?[{from:old,to:v}]:[])}
+// ---- birthday popup (shown once a day per browser, Philippine date) ----
+const todayPH=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Manila",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+function bdToday(){const t=todayPH(),md=t.slice(5),y=+t.slice(0,4),leap=y%4===0&&(y%100!==0||y%400===0),bd=cfg.birthdays||{};
+ return Object.keys(bd).filter(n=>bd[n]===md||(bd[n]==="02-29"&&!leap&&md==="02-28")).sort((a,b)=>a.localeCompare(b))}
+function checkBirthdays(){const l=bdToday();if(!l.length)return;const key=todayPH()+"|"+l.join(",");
+ try{if(localStorage.getItem("bdayShown")===key)return;localStorage.setItem("bdayShown",key)}catch(e){}showBday(l)}
+function showBday(l){$("bNames").innerHTML=l.map(n=>`<div>🎉 ${esc(n)}</div>`).join("");
+ const box=$("bday").querySelector(".bbox");box.querySelectorAll(".conf").forEach(x=>x.remove());
+ const cols=["#6d5bf0","#a855f7","#ec4899","#f59e0b","#10b981","#3b82f6"];
+ for(let i=0;i<26;i++){const c=document.createElement("span");c.className="conf";c.style.cssText=`left:${Math.random()*100}%;background:${cols[i%cols.length]};animation-duration:${2.2+Math.random()*2}s;animation-delay:${Math.random()*.8}s`;box.appendChild(c)}
+ $("bday").classList.remove("hide")}
+function bdClose(){$("bday").classList.add("hide")}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){bdClose();nmClose()}});
+async function delName(i){if(!confirm("Delete \""+cfg.names[i]+"\" from the names list? Existing requests keep this name."))return;{const bd={...(cfg.birthdays||{})};delete bd[cfg.names[i]];cfg.birthdays=bd}cfg.names.splice(i,1);await saveCfg()}
 document.addEventListener("input",e=>e.target.classList&&e.target.classList.remove("bad"));document.addEventListener("change",e=>e.target.classList&&e.target.classList.remove("bad"));
 function resetForm(){editId=null;["fName","fOther","fRem","fStart","fEnd","fAppr"].forEach(i=>$(i).value="");$("fType").selectedIndex=0;$("otherWrap").classList.add("hide");$("fReq").value=iso(new Date());$("fT").textContent="New request";$("sBtn").textContent="Submit";$("cBtn").classList.add("hide")}
 function cancelEdit(){resetForm();$("msg").textContent=""}
